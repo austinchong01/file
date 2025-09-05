@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <a href="/dashboard" class="navbar-brand"><i class="fas fa-cloud"></i> File Uploader</a>
+            <div>
+                <span class="text-light me-3">Hello, <%= user.name %>!</span>
+                <a href="/auth/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">Home</a></li>
+                <% if (folder.parent) { %>
+                    <li class="breadcrumb-item"><a href="/folders/<%= folder.parent.id %>"><%= folder.parent.name %></a></li>
+                <% } %>
+                <li class="breadcrumb-item active"><%= folder.name %></li>
+            </ol>
+        </nav>
+
+        <!-- Flash Messages -->
+        <% if (success_msg && success_msg.length > 0) { %>
+            <div class="alert alert-success alert-dismissible fade show">
+                <%= success_msg %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+        
+        <% if (error_msg && error_msg.length > 0) { %>
+            <div class="alert alert-danger alert-dismissible fade show">
+                <%= error_msg %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1><i class="fas fa-folder-open text-warning"></i> <%= folder.name %></h1>
+                <% if (folder.description) { %>
+                    <p class="text-muted"><%= folder.description %></p>
+                <% } %>
+            </div>
+            <div>
+                <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#folderModal">
+                    <i class="fas fa-folder-plus"></i> New Folder
+                </button>
+                <a href="/files/upload?folderId=<%= folder.id %>" class="btn btn-success">
+                    <i class="fas fa-upload"></i> Upload
+                </a>
+            </div>
+        </div>
+
+        <!-- Contents -->
+        <div class="row">
+            <!-- Subfolders -->
+            <% folders.forEach(subfolder => { %>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center d-flex flex-column">
+                        <i class="fas fa-folder fa-3x text-warning mb-2"></i>
+                        <h6 class="card-title"><%= subfolder.name %></h6>
+                        <% if (subfolder.description) { %>
+                            <small class="text-muted flex-grow-1"><%= subfolder.description %></small>
+                        <% } %>
+                        <div class="mt-auto">
+                            <a href="/folders/<%= subfolder.id %>" class="btn btn-sm btn-primary me-1">
+                                <i class="fas fa-folder-open"></i> Open
+                            </a>
+                            <form method="POST" action="/folders/<%= subfolder.id %>?_method=DELETE" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger" 
+                                        onclick="return confirm('Delete folder and all its contents?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% }); %>
+
+            <!-- Files -->
+            <% files.forEach(file => { %>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center d-flex flex-column">
+                        <% 
+                        let iconClass = 'fa-file';
+                        if (file.mimetype.startsWith('image/')) iconClass = 'fa-file-image text-info';
+                        else if (file.mimetype.startsWith('video/')) iconClass = 'fa-file-video text-danger';
+                        else if (file.mimetype.startsWith('audio/')) iconClass = 'fa-file-audio text-success';
+                        else if (file.mimetype === 'application/pdf') iconClass = 'fa-file-pdf text-danger';
+                        else iconClass = 'fa-file text-secondary';
+                        %>
+                        <i class="fas <%= iconClass %> fa-3x mb-2"></i>
+                        <h6 class="card-title" title="<%= file.originalName %>">
+                            <%= file.originalName.length > 20 ? file.originalName.substring(0, 20) + '...' : file.originalName %>
+                        </h6>
+                        <small class="text-muted flex-grow-1">
+                            <%= (file.size / 1024).toFixed(1) %> KB<br>
+                            <small><%= new Date(file.createdAt).toLocaleDateString() %></small>
+                        </small>
+                        <div class="mt-auto">
+                            <a href="/files/<%= file.id %>" class="btn btn-sm btn-info me-1">
+                                <i class="fas fa-info-circle"></i>
+                            </a>
+                            <a href="/files/<%= file.id %>/download" class="btn btn-sm btn-success me-1">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            <form method="POST" action="/files/<%= file.id %>?_method=DELETE" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger" 
+                                        onclick="return confirm('Delete this file?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% }); %>
+        </div>
+
+        <% if (folders.length === 0 && files.length === 0) { %>
+        <div class="text-center mt-5">
+            <i class="fas fa-folder-open fa-5x text-muted mb-3"></i>
+            <h3>Folder is empty</h3>
+            <p class="text-muted">Create a subfolder or upload files to get started</p>
+            <div>
+                <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#folderModal">
+                    <i class="fas fa-folder-plus"></i> Create Folder
+                </button>
+                <a href="/files/upload?folderId=<%= folder.id %>" class="btn btn-success">
+                    <i class="fas fa-upload"></i> Upload File
+                </a>
+            </div>
+        </div>
+        <% } %>
+    </div>
+
+    <!-- Create Folder Modal -->
+    <div class="modal fade" id="folderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Subfolder in <%= folder.name %></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/folders/create" method="POST">
+                    <input type="hidden" name="parentId" value="<%= folder.id %>">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Folder Name</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="Enter folder name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="3" placeholder="Enter folder description"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-folder-plus"></i> Create Folder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
