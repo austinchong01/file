@@ -1,30 +1,25 @@
-// config/passport.js
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-// Local Strategy
+// Local strategy
 passport.use(new LocalStrategy(
-  {
-    usernameField: 'email', // Use email as username
-    passwordField: 'password'
-  },
+  { usernameField: 'email' },
   async (email, password, done) => {
     try {
-      // Find user by email
       const user = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() }
+        where: { email: email }
       });
 
       if (!user) {
         return done(null, false, { message: 'No user with that email' });
       }
 
-      // Check password
       const isMatch = await bcrypt.compare(password, user.password);
+      
       if (isMatch) {
         return done(null, user);
       } else {
@@ -36,17 +31,16 @@ passport.use(new LocalStrategy(
   }
 ));
 
-// Serialize user for the session
+// Serialize user
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
-// Deserialize user from the session
+// Deserialize user
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { id: id },
-      select: { id: true, username: true, email: true, name: true }
+      where: { id: id }
     });
     done(null, user);
   } catch (error) {

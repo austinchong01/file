@@ -15,13 +15,17 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
+  id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // hashed password
-  name      String?
+  password  String
+  name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  folders Folder[]
+  files   File[]
+
+  @@map("users")
 }
 
 model Session {
@@ -29,4 +33,41 @@ model Session {
   sid       String   @unique
   data      String
   expiresAt DateTime
+
+  @@map("sessions")
+}
+
+model Folder {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children    Folder[] @relation("FolderHierarchy")
+  files       File[]
+  
+  @@map("folders")
+}
+
+model File {
+  id           String   @id @default(cuid())
+  originalName String
+  filename     String
+  mimetype     String
+  size         Int
+  path         String
+  userId       String
+  folderId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder       Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  
+  @@map("files")
 }
