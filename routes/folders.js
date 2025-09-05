@@ -15,15 +15,13 @@ router.post('/create', ensureAuthenticated, async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    const folderData = {
-      name: name,
-      description: description || null,
-      userId: req.user.id,
-      parentId: parentId || null
-    };
-
     await prisma.folder.create({
-      data: folderData
+      data: {
+        name,
+        description: description || null,
+        userId: req.user.id,
+        parentId: parentId || null
+      }
     });
 
     req.flash('success_msg', 'Folder created successfully');
@@ -35,17 +33,14 @@ router.post('/create', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Get folder contents
+// View folder contents
 router.get('/:id', ensureAuthenticated, async (req, res) => {
   try {
     const folder = await prisma.folder.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      },
+      where: { id: req.params.id, userId: req.user.id },
       include: {
-        children: true,
-        files: true,
+        children: { orderBy: { name: 'asc' } },
+        files: { orderBy: { createdAt: 'desc' } },
         parent: true
       }
     });
@@ -57,7 +52,9 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
 
     res.render('folder-view', {
       title: `Folder: ${folder.name}`,
-      folder: folder
+      folder,
+      folders: folder.children,
+      files: folder.files
     });
   } catch (error) {
     console.error(error);
@@ -72,10 +69,7 @@ router.put('/:id', ensureAuthenticated, async (req, res) => {
     const { name, description } = req.body;
 
     const folder = await prisma.folder.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
+      where: { id: req.params.id, userId: req.user.id }
     });
 
     if (!folder) {
@@ -104,14 +98,8 @@ router.put('/:id', ensureAuthenticated, async (req, res) => {
 router.delete('/:id', ensureAuthenticated, async (req, res) => {
   try {
     const folder = await prisma.folder.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      },
-      include: {
-        children: true,
-        files: true
-      }
+      where: { id: req.params.id, userId: req.user.id },
+      include: { children: true, files: true }
     });
 
     if (!folder) {
@@ -124,9 +112,7 @@ router.delete('/:id', ensureAuthenticated, async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    await prisma.folder.delete({
-      where: { id: req.params.id }
-    });
+    await prisma.folder.delete({ where: { id: req.params.id } });
 
     req.flash('success_msg', 'Folder deleted successfully');
     res.redirect('/dashboard');

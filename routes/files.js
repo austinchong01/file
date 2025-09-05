@@ -8,30 +8,18 @@ const { ensureAuthenticated } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Multer configuration
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+// Multer setup
+const upload = multer({
+  destination: (req, file, cb) => {
     const uploadPath = 'uploads/';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
+    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
     cb(null, uploadPath);
   },
-  filename: function (req, file, cb) {
+  filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
   },
-  fileFilter: function (req, file, cb) {
-    // Add file type restrictions if needed
-    cb(null, true);
-  }
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
 // Upload form
@@ -41,11 +29,7 @@ router.get('/upload', ensureAuthenticated, async (req, res) => {
       where: { userId: req.user.id },
       orderBy: { name: 'asc' }
     });
-    
-    res.render('upload', { 
-      title: 'Upload File',
-      folders: folders 
-    });
+    res.render('upload', { title: 'Upload File', folders });
   } catch (error) {
     console.error(error);
     req.flash('error_msg', 'Error loading upload page');
@@ -53,7 +37,7 @@ router.get('/upload', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Handle file upload
+// Handle upload
 router.post('/upload', ensureAuthenticated, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -61,18 +45,16 @@ router.post('/upload', ensureAuthenticated, upload.single('file'), async (req, r
       return res.redirect('/files/upload');
     }
 
-    const fileData = {
-      originalName: req.file.originalname,
-      filename: req.file.filename,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      path: req.file.path,
-      userId: req.user.id,
-      folderId: req.body.folderId || null
-    };
-
-    const savedFile = await prisma.file.create({
-      data: fileData
+    await prisma.file.create({
+      data: {
+        originalName: req.file.originalname,
+        filename: req.file.filename,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path,
+        userId: req.user.id,
+        folderId: req.body.folderId || null
+      }
     });
 
     req.flash('success_msg', 'File uploaded successfully');
@@ -88,13 +70,8 @@ router.post('/upload', ensureAuthenticated, upload.single('file'), async (req, r
 router.get('/:id', ensureAuthenticated, async (req, res) => {
   try {
     const file = await prisma.file.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      },
-      include: {
-        folder: true
-      }
+      where: { id: req.params.id, userId: req.user.id },
+      include: { folder: true }
     });
 
     if (!file) {
@@ -102,13 +79,10 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    res.render('file-details', {
-      title: 'File Details',
-      file: file
-    });
+    res.render('file-details', { title: 'File Details', file });
   } catch (error) {
     console.error(error);
-    req.flash('error_msg', 'Error loading file details');
+    req.flash('error_msg', 'Error loading file');
     res.redirect('/dashboard');
   }
 });
@@ -117,10 +91,7 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
 router.get('/:id/download', ensureAuthenticated, async (req, res) => {
   try {
     const file = await prisma.file.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
+      where: { id: req.params.id, userId: req.user.id }
     });
 
     if (!file) {
@@ -129,7 +100,6 @@ router.get('/:id/download', ensureAuthenticated, async (req, res) => {
     }
 
     const filePath = path.join(__dirname, '..', file.path);
-    
     if (!fs.existsSync(filePath)) {
       req.flash('error_msg', 'File not found on disk');
       return res.redirect('/dashboard');
@@ -147,10 +117,7 @@ router.get('/:id/download', ensureAuthenticated, async (req, res) => {
 router.delete('/:id', ensureAuthenticated, async (req, res) => {
   try {
     const file = await prisma.file.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user.id
-      }
+      where: { id: req.params.id, userId: req.user.id }
     });
 
     if (!file) {
@@ -158,16 +125,12 @@ router.delete('/:id', ensureAuthenticated, async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    // Delete file from filesystem
+    // Delete from filesystem
     const filePath = path.join(__dirname, '..', file.path);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
     // Delete from database
-    await prisma.file.delete({
-      where: { id: req.params.id }
-    });
+    await prisma.file.delete({ where: { id: req.params.id } });
 
     req.flash('success_msg', 'File deleted successfully');
     res.redirect('/dashboard');
