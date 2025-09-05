@@ -8,7 +8,7 @@
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container">
-            <span class="navbar-brand"><i class="fas fa-cloud"></i> File Uploader</span>
+            <a href="/dashboard" class="navbar-brand"><i class="fas fa-cloud"></i> File Uploader</a>
             <div>
                 <span class="text-light me-3">Hello, <%= user.name %>!</span>
                 <a href="/auth/logout" class="btn btn-outline-light btn-sm">Logout</a>
@@ -17,24 +17,25 @@
     </nav>
 
     <div class="container mt-4">
-        <!-- Flash Messages -->
-        <% if (success_msg && success_msg.length > 0) { %>
-            <div class="alert alert-success alert-dismissible fade show">
-                <%= success_msg %>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <% } %>
-        
-        <% if (error_msg && error_msg.length > 0) { %>
-            <div class="alert alert-danger alert-dismissible fade show">
-                <%= error_msg %>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <% } %>
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">Home</a></li>
+                <% if (folder.parent) { %>
+                    <li class="breadcrumb-item"><a href="/folders/<%= folder.parent.id %>"><%= folder.parent.name %></a></li>
+                <% } %>
+                <li class="breadcrumb-item active"><%= folder.name %></li>
+            </ol>
+        </nav>
 
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+            <div>
+                <h1><i class="fas fa-folder-open text-warning"></i> <%= folder.name %></h1>
+                <% if (folder.description) { %>
+                    <p class="text-muted"><%= folder.description %></p>
+                <% } %>
+            </div>
             <div>
                 <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#folderModal">
                     <i class="fas fa-folder-plus"></i> New Folder
@@ -45,19 +46,19 @@
             </div>
         </div>
 
-        <!-- File Manager -->
+        <!-- Contents -->
         <div class="row">
-            <!-- Folders -->
-            <% folders.forEach(folder => { %>
+            <!-- Subfolders -->
+            <% folders.forEach(subfolder => { %>
             <div class="col-md-3 mb-3">
                 <div class="card">
                     <div class="card-body text-center">
                         <i class="fas fa-folder fa-3x text-warning mb-2"></i>
-                        <h6><%= folder.name %></h6>
-                        <small class="text-muted"><%= folder.description || '' %></small>
+                        <h6><%= subfolder.name %></h6>
+                        <small class="text-muted"><%= subfolder.description || '' %></small>
                         <div class="mt-2">
-                            <a href="/folders/<%= folder.id %>" class="btn btn-sm btn-primary">Open</a>
-                            <form method="POST" action="/folders/<%= folder.id %>?_method=DELETE" class="d-inline">
+                            <a href="/folders/<%= subfolder.id %>" class="btn btn-sm btn-primary">Open</a>
+                            <form method="POST" action="/folders/<%= subfolder.id %>?_method=DELETE" class="d-inline">
                                 <button type="submit" class="btn btn-sm btn-danger" 
                                         onclick="return confirm('Delete folder?')">Delete</button>
                             </form>
@@ -92,8 +93,8 @@
         <% if (folders.length === 0 && files.length === 0) { %>
         <div class="text-center mt-5">
             <i class="fas fa-folder-open fa-5x text-muted mb-3"></i>
-            <h3>No files or folders</h3>
-            <p class="text-muted">Start by creating a folder or uploading a file</p>
+            <h3>Folder is empty</h3>
+            <p class="text-muted">Create a subfolder or upload files</p>
         </div>
         <% } %>
     </div>
@@ -103,10 +104,11 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create Folder</h5>
+                    <h5 class="modal-title">Create Subfolder</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="/folders/create" method="POST">
+                    <input type="hidden" name="parentId" value="<%= folder.id %>">
                     <div class="modal-body">
                         <div class="mb-3">
                             <input type="text" class="form-control" name="name" placeholder="Folder name" required>
