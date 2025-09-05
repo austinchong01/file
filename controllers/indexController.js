@@ -3,7 +3,11 @@ const db = require("../db/queries");
 async function getElements(req, res) {
   try {
     const people = await db.getElements();
-    res.render('index', { people: people });
+    res.render('index', { 
+      people: people,
+      title: 'People Database',
+      user: req.user
+    });
   } catch (error) {
     console.error('Error fetching people:', error);
     res.status(500).send('Error fetching data from database');
