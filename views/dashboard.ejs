@@ -50,16 +50,22 @@
             <!-- Folders -->
             <% folders.forEach(folder => { %>
             <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body text-center">
+                <div class="card h-100">
+                    <div class="card-body text-center d-flex flex-column">
                         <i class="fas fa-folder fa-3x text-warning mb-2"></i>
-                        <h6><%= folder.name %></h6>
-                        <small class="text-muted"><%= folder.description || '' %></small>
-                        <div class="mt-2">
-                            <a href="/folders/<%= folder.id %>" class="btn btn-sm btn-primary">Open</a>
+                        <h6 class="card-title"><%= folder.name %></h6>
+                        <% if (folder.description) { %>
+                            <small class="text-muted flex-grow-1"><%= folder.description %></small>
+                        <% } %>
+                        <div class="mt-auto">
+                            <a href="/folders/<%= folder.id %>" class="btn btn-sm btn-primary me-1">
+                                <i class="fas fa-folder-open"></i> Open
+                            </a>
                             <form method="POST" action="/folders/<%= folder.id %>?_method=DELETE" class="d-inline">
                                 <button type="submit" class="btn btn-sm btn-danger" 
-                                        onclick="return confirm('Delete folder?')">Delete</button>
+                                        onclick="return confirm('Delete folder and all its contents?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </form>
                         </div>
                     </div>
@@ -70,18 +76,60 @@
             <!-- Files -->
             <% files.forEach(file => { %>
             <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <i class="fas fa-file fa-3x text-secondary mb-2"></i>
-                        <h6><%= file.originalName %></h6>
-                        <small class="text-muted"><%= (file.size / 1024).toFixed(1) %> KB</small>
-                        <div class="mt-2">
-                            <a href="/files/<%= file.id %>" class="btn btn-sm btn-info">View</a>
-                            <a href="/files/<%= file.id %>/download" class="btn btn-sm btn-success">Download</a>
-                            <form method="POST" action="/files/<%= file.id %>?_method=DELETE" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-danger" 
-                                        onclick="return confirm('Delete file?')">Delete</button>
-                            </form>
+                <div class="card h-100">
+                    <div class="card-body text-center d-flex flex-column">
+                        <% 
+                        let iconClass = 'fa-file';
+                        let iconColor = 'text-secondary';
+                        if (file.mimetype.startsWith('image/')) { iconClass = 'fa-file-image'; iconColor = 'text-info'; }
+                        else if (file.mimetype.startsWith('video/')) { iconClass = 'fa-file-video'; iconColor = 'text-danger'; }
+                        else if (file.mimetype.startsWith('audio/')) { iconClass = 'fa-file-audio'; iconColor = 'text-success'; }
+                        else if (file.mimetype === 'application/pdf') { iconClass = 'fa-file-pdf'; iconColor = 'text-danger'; }
+                        else if (file.mimetype.includes('word')) { iconClass = 'fa-file-word'; iconColor = 'text-primary'; }
+                        else if (file.mimetype.includes('excel')) { iconClass = 'fa-file-excel'; iconColor = 'text-success'; }
+                        else if (file.mimetype.includes('powerpoint')) { iconClass = 'fa-file-powerpoint'; iconColor = 'text-warning'; }
+                        %>
+                        <i class="fas <%= iconClass %> fa-3x <%= iconColor %> mb-2"></i>
+                        
+                        <h6 class="card-title" title="<%= file.originalName %>">
+                            <%= file.originalName.length > 20 ? file.originalName.substring(0, 20) + '...' : file.originalName %>
+                        </h6>
+                        
+                        <small class="text-muted flex-grow-1">
+                            <%= (file.size / 1024).toFixed(1) %> KB<br>
+                            <small><%= new Date(file.createdAt).toLocaleDateString() %></small>
+                        </small>
+                        
+                        <!-- Cloud storage indicator -->
+                        <div class="mb-2">
+                            <span class="badge bg-success">
+                                <i class="fas fa-cloud"></i> Cloud
+                            </span>
+                        </div>
+                        
+                        <div class="mt-auto">
+                            <!-- Action buttons -->
+                            <div class="btn-group-vertical w-100" role="group">
+                                <div class="btn-group" role="group">
+                                    <a href="/files/<%= file.id %>" class="btn btn-sm btn-info" title="View Details">
+                                        <i class="fas fa-info-circle"></i>
+                                    </a>
+                                    <a href="/files/<%= file.id %>/download" class="btn btn-sm btn-success" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    <% if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf' || file.mimetype.startsWith('text/')) { %>
+                                    <a href="/files/<%= file.id %>/view" class="btn btn-sm btn-outline-info" target="_blank" title="View in Browser">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <% } %>
+                                </div>
+                                <form method="POST" action="/files/<%= file.id %>?_method=DELETE" class="mt-1">
+                                    <button type="submit" class="btn btn-sm btn-danger w-100" 
+                                            onclick="return confirm('Delete this file?')" title="Delete">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -93,7 +141,65 @@
         <div class="text-center mt-5">
             <i class="fas fa-folder-open fa-5x text-muted mb-3"></i>
             <h3>No files or folders</h3>
-            <p class="text-muted">Start by creating a folder or uploading a file</p>
+            <p class="text-muted">Start by creating a folder or uploading a file to cloud storage</p>
+            <div>
+                <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#folderModal">
+                    <i class="fas fa-folder-plus"></i> Create Folder
+                </button>
+                <a href="/files/upload" class="btn btn-success">
+                    <i class="fas fa-upload"></i> Upload File
+                </a>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Statistics Card -->
+        <% if (files.length > 0 || folders.length > 0) { %>
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h6><i class="fas fa-chart-bar"></i> Storage Summary</h6>
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="border-end">
+                                    <h4 class="text-primary"><%= files.length %></h4>
+                                    <small class="text-muted">Files</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border-end">
+                                    <h4 class="text-warning"><%= folders.length %></h4>
+                                    <small class="text-muted">Folders</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border-end">
+                                    <h4 class="text-success">
+                                        <%
+                                        let totalSize = files.reduce((sum, file) => sum + file.size, 0);
+                                        let units = ['B', 'KB', 'MB', 'GB'];
+                                        let i = 0;
+                                        while (totalSize >= 1024 && i < units.length - 1) {
+                                            totalSize /= 1024;
+                                            i++;
+                                        }
+                                        %>
+                                        <%= totalSize.toFixed(i > 0 ? 1 : 0) %> <%= units[i] %>
+                                    </h4>
+                                    <small class="text-muted">Total Size</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <h4 class="text-info">
+                                    <i class="fas fa-cloud"></i>
+                                </h4>
+                                <small class="text-muted">Cloud Storage</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <% } %>
     </div>
@@ -109,15 +215,21 @@
                 <form action="/folders/create" method="POST">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <input type="text" class="form-control" name="name" placeholder="Folder name" required>
+                            <label for="name" class="form-label">Folder Name</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="Enter folder name" required>
                         </div>
                         <div class="mb-3">
-                            <textarea class="form-control" name="description" placeholder="Description (optional)"></textarea>
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="3" placeholder="Enter folder description"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-folder-plus"></i> Create Folder
+                        </button>
                     </div>
                 </form>
             </div>
@@ -125,5 +237,66 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Download functionality enhancement -->
+    <script>
+        // Add download progress indication
+        document.addEventListener('DOMContentLoaded', function() {
+            const downloadLinks = document.querySelectorAll('a[href*="/download"]');
+            
+            downloadLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const btn = this;
+                    const originalHtml = btn.innerHTML;
+                    
+                    // Show downloading state
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    btn.classList.add('disabled');
+                    
+                    // Reset after 3 seconds
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                        btn.classList.remove('disabled');
+                    }, 3000);
+                });
+            });
+        });
+
+        // Quick actions for files
+        function quickDownload(fileId, fileName) {
+            showToast(`Downloading ${fileName}...`);
+            window.open(`/files/${fileId}/download`, '_blank');
+        }
+
+        function quickView(fileId) {
+            window.open(`/files/${fileId}/view`, '_blank');
+        }
+
+        function showToast(message, type = 'info') {
+            // Create toast element
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Add to page
+            let toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(toastContainer);
+            }
+            
+            toastContainer.innerHTML = toastHtml;
+            const toastElement = toastContainer.querySelector('.toast');
+            const toast = new bootstrap.Toast(toastElement, { delay: 2000 });
+            toast.show();
+        }
+    </script>
 </body>
 </html>
