@@ -1,7 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const fs = require('fs');
-const path = require('path');
+const cloudinary = require('../config/cloudinary');
 
 // Get upload form
 exports.getUploadForm = async (req, res) => {
@@ -44,26 +43,27 @@ exports.uploadFile = async (req, res) => {
       });
       
       if (!folder) {
-        // Clean up uploaded file
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
         req.flash('error_msg', 'Invalid folder selected');
         return res.redirect('/files/upload');
       }
     }
 
+    // File is already uploaded to Cloudinary via multer middleware
+    // req.file contains the Cloudinary response
+    const fileData = {
+      originalName: req.file.originalname,
+      filename: req.file.filename, // Cloudinary public_id
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      cloudinaryUrl: req.file.path, // Cloudinary URL
+      cloudinaryPublicId: req.file.filename, // Cloudinary public_id
+      userId,
+      folderId: folderId || null
+    };
+
     // Save file info to database
     await prisma.file.create({
-      data: {
-        originalName: req.file.originalname,
-        filename: req.file.filename,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path,
-        userId,
-        folderId: folderId || null
-      }
+      data: fileData
     });
 
     req.flash('success_msg', 'File uploaded successfully');
@@ -76,12 +76,6 @@ exports.uploadFile = async (req, res) => {
     }
   } catch (error) {
     console.error('Upload file error:', error);
-    
-    // Clean up uploaded file on error
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    
     req.flash('error_msg', 'Error uploading file');
     res.redirect('/files/upload');
   }
@@ -114,7 +108,7 @@ exports.getFileDetails = async (req, res) => {
   }
 };
 
-// Download file
+// Download file (redirect to Cloudinary URL)
 exports.downloadFile = async (req, res) => {
   try {
     const fileId = req.params.id;
@@ -129,35 +123,17 @@ exports.downloadFile = async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    const filePath = path.resolve(file.path);
-    
-    // Check if file exists on disk
-    if (!fs.existsSync(filePath)) {
-      req.flash('error_msg', 'File not found on disk. It may have been moved or deleted.');
-      return res.redirect('/dashboard');
-    }
-
-    // Set appropriate headers for download
-    res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
-    res.setHeader('Content-Type', file.mimetype);
-    
-    // Stream the file
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-    
-    fileStream.on('error', (err) => {
-      console.error('File stream error:', err);
-      if (!res.headersSent) {
-        req.flash('error_msg', 'Error downloading file');
-        res.redirect('/dashboard');
-      }
+    // Generate a download URL with the original filename
+    const downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
+      flags: 'attachment',
+      resource_type: 'auto'
     });
+
+    res.redirect(downloadUrl);
   } catch (error) {
     console.error('Download file error:', error);
-    if (!res.headersSent) {
-      req.flash('error_msg', 'Error downloading file');
-      res.redirect('/dashboard');
-    }
+    req.flash('error_msg', 'Error downloading file');
+    res.redirect('/dashboard');
   }
 };
 
@@ -177,15 +153,14 @@ exports.deleteFile = async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    // Delete file from filesystem
-    const filePath = path.resolve(file.path);
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-      } catch (fsError) {
-        console.error('Error deleting file from disk:', fsError);
-        // Continue with database deletion even if file system deletion fails
-      }
+    // Delete file from Cloudinary
+    try {
+      await cloudinary.uploader.destroy(file.cloudinaryPublicId, {
+        resource_type: 'auto'
+      });
+    } catch (cloudinaryError) {
+      console.error('Error deleting file from Cloudinary:', cloudinaryError);
+      // Continue with database deletion even if Cloudinary deletion fails
     }
 
     // Delete file record from database
