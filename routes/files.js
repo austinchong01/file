@@ -1,3 +1,5 @@
+// routes/files.js - Fixed upload configuration
+
 const express = require("express");
 const multer = require("multer");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
@@ -8,39 +10,43 @@ const cloudinary = require("../config/cloudinary");
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Test Cloudinary connection on startup
-console.log("Testing Cloudinary configuration...");
-console.log("Cloud name:", cloudinary.config().cloud_name);
-console.log("API key:", cloudinary.config().api_key ? "Set" : "Missing");
-console.log("API secret:", cloudinary.config().api_secret ? "Set" : "Missing");
-
-// Simplified Cloudinary storage configuration
+// Fixed Cloudinary storage configuration
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: "file-uploader-test", // Simple folder name for testing
-    resource_type: "auto",
-    public_id: (req, file) => {
-      const timestamp = Date.now();
-      const randomSuffix = Math.round(Math.random() * 1e9);
-      return `${timestamp}_${randomSuffix}_${file.originalname}`;
-    },
-    allowed_formats: [
-      "jpg",
-      "jpeg",
-      "png",
-      "gif",
-      "pdf",
-      "doc",
-      "docx",
-      "txt",
-      "mp4",
-      "mp3",
-    ],
+  params: (req, file) => {
+    // Determine resource type based on file type
+    let resourceType = "auto";
+    if (
+      file.mimetype === "application/pdf" ||
+      file.mimetype.includes("document") ||
+      file.mimetype === "text/plain" ||
+      file.mimetype.includes("zip") ||
+      file.mimetype.includes("word") ||
+      file.mimetype.includes("excel") ||
+      file.mimetype.includes("powerpoint")
+    ) {
+      resourceType = "raw";
+    }
+
+    // Generate unique public_id
+    const timestamp = Date.now();
+    const randomSuffix = Math.round(Math.random() * 1e9);
+    const publicId = `${timestamp}_${randomSuffix}_${file.originalname}`;
+
+    return {
+      folder: "file-uploader-test",
+      resource_type: resourceType,
+      public_id: publicId, // Fixed: return the actual string, not a function
+      allowed_formats: [
+        "jpg", "jpeg", "png", "gif", "webp",
+        "pdf", "doc", "docx", "txt", "rtf",
+        "mp4", "avi", "mov", "mp3", "wav"
+      ],
+    };
   },
 });
 
-// Multer setup with Cloudinary storage
+// Multer setup with improved error handling
 const upload = multer({
   storage: storage,
   limits: {
@@ -50,25 +56,16 @@ const upload = multer({
     console.log("File filter - received file:", {
       originalname: file.originalname,
       mimetype: file.mimetype,
-      size: file.size,
     });
 
     const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
+      "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
       "application/pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "text/plain",
-      "video/mp4",
-      "video/avi",
-      "video/quicktime",
-      "audio/mp3",
-      "audio/mpeg",
-      "audio/wav",
+      "video/mp4", "video/avi", "video/quicktime",
+      "audio/mp3", "audio/mpeg", "audio/wav",
     ];
 
     if (allowedTypes.includes(file.mimetype)) {
@@ -103,7 +100,7 @@ router.get("/upload", ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Handle upload with extensive debugging
+// Enhanced upload handler with proper resource type tracking
 router.post("/upload", ensureAuthenticated, (req, res) => {
   console.log("\n=== UPLOAD DEBUG START ===");
   console.log("User ID:", req.user.id);
@@ -115,159 +112,214 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
     if (err) {
       console.error("Multer error:", err);
       if (err instanceof multer.MulterError) {
-        console.log("Multer error type:", err.code);
         if (err.code === "LIMIT_FILE_SIZE") {
           req.flash("error_msg", "File too large. Maximum size is 10MB.");
         } else {
           req.flash("error_msg", `Upload error: ${err.message}`);
         }
       } else {
-        console.log("Custom error:", err.message);
         req.flash("error_msg", err.message || "Error uploading file");
       }
       return res.redirect("/files/upload");
     }
 
-    console.log("\n--- File object analysis ---");
     if (!req.file) {
       console.log("No file received");
       req.flash("error_msg", "Please select a file");
       return res.redirect("/files/upload");
     }
 
-    // Log ALL properties of the file object
-    console.log("File object keys:", Object.keys(req.file));
+    // Log ALL properties of the file object to debug
     console.log("Complete file object:", JSON.stringify(req.file, null, 2));
+    console.log("File object keys:", Object.keys(req.file));
 
     try {
       const { folderId } = req.body;
 
       // Validate folder ownership if folderId is provided
       if (folderId && folderId.trim() !== "") {
-        console.log("Validating folder:", folderId);
         const folder = await prisma.folder.findFirst({
           where: { id: folderId, userId: req.user.id },
         });
 
         if (!folder) {
-          console.log("Invalid folder selected");
           req.flash("error_msg", "Invalid folder selected");
           return res.redirect("/files/upload");
         }
-        console.log("Folder validated:", folder.name);
       }
 
-      // Extract file information with extensive fallbacks
-      console.log("\n--- Extracting file data ---");
+      // Extract file information with multiple fallback options
+      const publicId = req.file.public_id || req.file.filename || req.file.key || `${Date.now()}_${req.file.originalname}`;
+      const secureUrl = req.file.secure_url || req.file.url || req.file.path || req.file.location;
+      const resourceType = req.file.resource_type || (
+        req.file.mimetype === "application/pdf" ||
+        req.file.mimetype.includes("document") ||
+        req.file.mimetype === "text/plain" ||
+        req.file.mimetype.includes("zip") ||
+        req.file.mimetype.includes("word") ||
+        req.file.mimetype.includes("excel") ||
+        req.file.mimetype.includes("powerpoint")
+      ) ? "raw" : "auto";
 
-      // Try different property names that Cloudinary might use
-      const possibleFilenames = [
-        req.file.public_id,
-        req.file.filename,
-        req.file.originalname,
-        `${Date.now()}_${req.file.originalname}`,
-      ];
+      console.log("Extracted values:", {
+        publicId,
+        secureUrl,
+        resourceType
+      });
 
-      const possibleUrls = [
-        req.file.secure_url,
-        req.file.url,
-        req.file.path,
-        req.file.location,
-      ];
-
-      const possiblePublicIds = [
-        req.file.public_id,
-        req.file.filename,
-        req.file.key,
-      ];
-
-      const filename =
-        possibleFilenames.find((f) => f) ||
-        `fallback_${Date.now()}_${req.file.originalname}`;
-      const cloudinaryUrl = possibleUrls.find((u) => u) || "";
-      const cloudinaryPublicId = possiblePublicIds.find((p) => p) || filename;
-
-      console.log("Extracted data:");
-      console.log("- filename:", filename);
-      console.log("- cloudinaryUrl:", cloudinaryUrl);
-      console.log("- cloudinaryPublicId:", cloudinaryPublicId);
-
-      // Validate that we have the required data
-      if (!filename) {
-        console.error("Could not determine filename");
-        req.flash("error_msg", "Upload failed: Could not determine filename");
+      // Validate required fields
+      if (!publicId) {
+        console.error("Could not determine public_id");
+        req.flash("error_msg", "Upload failed: Could not determine file ID");
         return res.redirect("/files/upload");
       }
 
-      if (!cloudinaryUrl) {
-        console.error("Could not determine Cloudinary URL");
-        req.flash(
-          "error_msg",
-          "Upload failed: Could not get file URL from Cloudinary"
-        );
+      if (!secureUrl) {
+        console.error("Could not determine URL");
+        req.flash("error_msg", "Upload failed: Could not determine file URL");
         return res.redirect("/files/upload");
       }
 
-      // Prepare file data for database
+      // Store file information with resource type
       const fileData = {
         originalName: req.file.originalname,
-        filename: filename,
+        filename: publicId, // Use extracted publicId as filename
         mimetype: req.file.mimetype,
         size: req.file.size,
-        cloudinaryUrl: cloudinaryUrl,
-        cloudinaryPublicId: cloudinaryPublicId,
+        cloudinaryUrl: secureUrl,
+        cloudinaryPublicId: publicId,
+        cloudinaryResourceType: resourceType,
         userId: req.user.id,
         folderId: folderId && folderId.trim() !== "" ? folderId : null,
       };
 
-      console.log("\n--- Database save attempt ---");
-      console.log("File data to save:", JSON.stringify(fileData, null, 2));
-
-      // Validate all required fields are present
-      const requiredFields = [
-        "originalName",
-        "filename",
-        "mimetype",
-        "size",
-        "cloudinaryUrl",
-        "cloudinaryPublicId",
-        "userId",
-      ];
-      const missingFields = requiredFields.filter((field) => !fileData[field]);
-
-      if (missingFields.length > 0) {
-        console.error("Missing required fields:", missingFields);
-        req.flash(
-          "error_msg",
-          `Upload failed: Missing required data: ${missingFields.join(", ")}`
-        );
-        return res.redirect("/files/upload");
-      }
+      console.log("Saving file data:", fileData);
 
       await prisma.file.create({
         data: fileData,
       });
 
       console.log("✓ File saved to database successfully");
-      console.log("=== UPLOAD DEBUG END ===\n");
-
       req.flash("success_msg", "File uploaded successfully to cloud storage");
 
-      // Redirect to appropriate location
       if (folderId && folderId.trim() !== "") {
         res.redirect(`/folders/${folderId}`);
       } else {
         res.redirect("/dashboard");
       }
     } catch (error) {
-      console.error("\n--- Database save error ---");
-      console.error("Error details:", error);
-      console.log("=== UPLOAD DEBUG END ===\n");
-
+      console.error("Database save error:", error);
       req.flash("error_msg", "Error saving file information");
       res.redirect("/files/upload");
     }
   });
+});
+
+// Fixed download functionality
+router.get("/:id/download", ensureAuthenticated, async (req, res) => {
+  try {
+    console.log("\n=== DOWNLOAD DEBUG START ===");
+    console.log("File ID:", req.params.id);
+
+    const file = await prisma.file.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+    });
+
+    if (!file) {
+      console.log("File not found in database");
+      req.flash("error_msg", "File not found");
+      return res.redirect("/dashboard");
+    }
+
+    console.log("Found file:", {
+      originalName: file.originalName,
+      cloudinaryPublicId: file.cloudinaryPublicId,
+      cloudinaryUrl: file.cloudinaryUrl,
+      mimetype: file.mimetype,
+      resourceType: file.cloudinaryResourceType
+    });
+
+    // Since your working URL uses 'image/upload', let's try that first for PDFs
+    let resourceType = "image"; // Start with image since that's what works
+    
+    // If the file was actually uploaded as raw, we might need to adjust
+    if (file.cloudinaryResourceType === "raw") {
+      resourceType = "raw";
+    }
+
+    console.log("Using resource type:", resourceType);
+
+    try {
+      // Method 1: Try to modify the working URL to add download flag
+      if (file.cloudinaryUrl) {
+        let downloadUrl = file.cloudinaryUrl;
+        
+        // Add the attachment flag to force download
+        if (downloadUrl.includes("/upload/")) {
+          downloadUrl = downloadUrl.replace("/upload/", "/upload/fl_attachment/");
+        }
+        
+        console.log("Method 1 - Modified URL:", downloadUrl);
+        
+        // Set proper headers
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${file.originalName}"`
+        );
+        
+        return res.redirect(downloadUrl);
+      }
+
+    } catch (urlError) {
+      console.error("Method 1 failed:", urlError);
+    }
+
+    // Method 2: Try different resource types with cloudinary.url()
+    const resourceTypesToTry = ["image", "raw", "auto", "video"];
+    
+    for (const resType of resourceTypesToTry) {
+      try {
+        const testUrl = cloudinary.url(file.cloudinaryPublicId, {
+          resource_type: resType,
+          secure: true,
+          flags: "attachment"
+        });
+        
+        console.log(`Method 2 - Trying resource type ${resType}:`, testUrl);
+        
+        // Set proper headers
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${file.originalName}"`
+        );
+        
+        return res.redirect(testUrl);
+        
+      } catch (fallbackError) {
+        console.log(`Resource type ${resType} failed:`, fallbackError.message);
+        continue;
+      }
+    }
+
+    // Method 3: Direct cloudinary URL without modifications
+    if (file.cloudinaryUrl) {
+      console.log("Method 3 - Using direct URL:", file.cloudinaryUrl);
+      
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${file.originalName}"`
+      );
+      
+      return res.redirect(file.cloudinaryUrl);
+    }
+
+    throw new Error("All download methods failed");
+
+  } catch (error) {
+    console.error("Download error:", error);
+    req.flash("error_msg", "Error downloading file. Please try again.");
+    res.redirect("/dashboard");
+  }
 });
 
 // File details
@@ -291,162 +343,6 @@ router.get("/:id", ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Enhanced download file functionality with corrected Public ID handling
-router.get("/:id/download", ensureAuthenticated, async (req, res) => {
-  try {
-    console.log("\n=== DOWNLOAD DEBUG START ===");
-    console.log("File ID:", req.params.id);
-    console.log("User ID:", req.user.id);
-
-    const file = await prisma.file.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
-      include: { folder: true },
-    });
-
-    if (!file) {
-      console.log("File not found in database");
-      req.flash("error_msg", "File not found");
-      return res.redirect("/dashboard");
-    }
-
-    console.log("Found file:", {
-      id: file.id,
-      originalName: file.originalName,
-      cloudinaryPublicId: file.cloudinaryPublicId,
-      cloudinaryUrl: file.cloudinaryUrl,
-      mimetype: file.mimetype,
-    });
-
-    // Check if we have valid Cloudinary data
-    if (!file.cloudinaryPublicId && !file.cloudinaryUrl) {
-      console.error("No Cloudinary data available for file");
-      req.flash(
-        "error_msg",
-        "File download not available - no cloud storage data"
-      );
-      return res.redirect("/dashboard");
-    }
-
-    // Determine the correct resource type based on file type
-    let resourceType = "auto";
-    if (
-      file.mimetype === "application/pdf" ||
-      file.mimetype.includes("document") ||
-      file.mimetype === "text/plain" ||
-      file.mimetype.includes("zip") ||
-      file.mimetype.includes("word") ||
-      file.mimetype.includes("excel") ||
-      file.mimetype.includes("powerpoint")
-    ) {
-      resourceType = "raw";
-    } else if (file.mimetype.startsWith("image/")) {
-      resourceType = "image";
-    } else if (file.mimetype.startsWith("video/")) {
-      resourceType = "video";
-    } else if (file.mimetype.startsWith("audio/")) {
-      resourceType = "video"; // Cloudinary treats audio as video resource
-    }
-
-    console.log("Using resource type:", resourceType);
-    console.log("Public ID from database:", file.cloudinaryPublicId);
-
-    // Method 1: Use the exact public_id from database
-    try {
-      if (file.cloudinaryPublicId) {
-        const downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
-          resource_type: resourceType,
-          secure: true,
-          flags: "attachment",
-        });
-
-        console.log("Generated download URL:", downloadUrl);
-        console.log("=== DOWNLOAD DEBUG END ===\n");
-
-        // Set headers and redirect
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="${file.originalName}"`
-        );
-        return res.redirect(downloadUrl);
-      }
-    } catch (urlError) {
-      console.error("Error generating Cloudinary URL:", urlError);
-    }
-
-    // Method 2: Try with different resource types if first fails
-    const resourceTypesToTry = ["raw", "auto", "image", "video"];
-
-    for (const resType of resourceTypesToTry) {
-      try {
-        const downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
-          resource_type: resType,
-          secure: true,
-          flags: "attachment",
-        });
-
-        console.log(`Trying resource type ${resType}:`, downloadUrl);
-
-        // Test if this URL might work by checking the format
-        if (
-          downloadUrl &&
-          downloadUrl.includes(file.cloudinaryPublicId.replace(/\//g, "/"))
-        ) {
-          console.log(`Using resource type: ${resType}`);
-          res.setHeader(
-            "Content-Disposition",
-            `attachment; filename="${file.originalName}"`
-          );
-          return res.redirect(downloadUrl);
-        }
-      } catch (err) {
-        console.log(`Resource type ${resType} failed:`, err.message);
-        continue;
-      }
-    }
-
-    // Method 3: Manual URL construction as fallback
-    if (file.cloudinaryUrl) {
-      try {
-        let downloadUrl = file.cloudinaryUrl;
-
-        // Add download flag
-        if (downloadUrl.includes("/upload/")) {
-          downloadUrl = downloadUrl.replace(
-            "/upload/",
-            "/upload/fl_attachment/"
-          );
-        } else {
-          downloadUrl += downloadUrl.includes("?")
-            ? "&fl_attachment=true"
-            : "?fl_attachment=true";
-        }
-
-        console.log("Manual URL construction:", downloadUrl);
-        console.log("=== DOWNLOAD DEBUG END ===\n");
-
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="${file.originalName}"`
-        );
-        return res.redirect(downloadUrl);
-      } catch (modifyError) {
-        console.error("Error modifying URL:", modifyError);
-      }
-    }
-
-    // Method 4: Fallback to proxy download
-    console.log(
-      "All URL generation methods failed, falling back to proxy download"
-    );
-    return res.redirect(`/files/${file.id}/download-proxy`);
-  } catch (error) {
-    console.error("Download error:", error);
-    console.log("=== DOWNLOAD DEBUG END ===\n");
-    req.flash("error_msg", "Error downloading file");
-    res.redirect("/dashboard");
-  }
-});
-
 // Delete file
 router.delete("/:id", ensureAuthenticated, async (req, res) => {
   try {
@@ -459,10 +355,11 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
       return res.redirect("/dashboard");
     }
 
-    // Delete from Cloudinary
+    // Delete from Cloudinary with correct resource type
     try {
+      const resourceType = file.cloudinaryResourceType || "auto";
       await cloudinary.uploader.destroy(file.cloudinaryPublicId, {
-        resource_type: "auto",
+        resource_type: resourceType,
       });
     } catch (cloudinaryError) {
       console.error("Cloudinary deletion error:", cloudinaryError);

@@ -1,3 +1,5 @@
+// prisma/schema.prisma - Updated schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -48,17 +50,18 @@ model Folder {
 }
 
 model File {
-  id                String   @id @default(cuid())
-  originalName      String
-  filename          String   // Cloudinary public_id
-  mimetype          String
-  size              Int
-  cloudinaryUrl     String   // Cloudinary URL
-  cloudinaryPublicId String   // Cloudinary public_id (same as filename)
-  userId            String
-  folderId          String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  originalName            String
+  filename                String   // Cloudinary public_id
+  mimetype                String
+  size                    Int
+  cloudinaryUrl           String   // Cloudinary URL
+  cloudinaryPublicId      String   // Cloudinary public_id (same as filename)
+  cloudinaryResourceType  String?  // NEW: Store the resource type used in Cloudinary
+  userId                  String
+  folderId                String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
   
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
