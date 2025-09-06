@@ -10,39 +10,29 @@ const methodOverride = require('method-override');
 const app = express();
 const prisma = new PrismaClient();
 
-// Passport config
 require('./config/passport');
 
-// View engine
 app.set('view engine', 'ejs');
-
-// Static files and uploads
 app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
-
-// Body parser
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(methodOverride('_method'));
 
-// Sessions
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 }, // 24 hours
+  cookie: { maxAge: 24 * 60 * 60 * 1000 },
   store: new PrismaSessionStore(prisma, {
-    checkPeriod: 2 * 60 * 1000, // Check expired sessions every 2 minutes
+    checkPeriod: 2 * 60 * 1000,
     dbRecordIdIsSessionId: true
   })
 }));
 
-// Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(flash());
 
-// Global variables
 app.use((req, res, next) => {
   res.locals.user = req.user || null;
   res.locals.success_msg = req.flash('success_msg');
@@ -51,44 +41,29 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
 app.use('/auth', require('./routes/auth'));
 app.use('/files', require('./routes/files'));
 app.use('/folders', require('./routes/folders'));
 
-// Home route
 app.get('/', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.redirect('/dashboard');
-  } else {
-    res.redirect('/auth/login');
-  }
+  res.redirect(req.isAuthenticated() ? '/dashboard' : '/auth/login');
 });
 
-// Dashboard route
 app.get('/dashboard', (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.redirect('/auth/login');
-  }
-  
-  // Use the dashboard controller
+  if (!req.isAuthenticated()) return res.redirect('/auth/login');
   require('./controllers/dashboardController').getDashboard(req, res);
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).send('Page not found');
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
