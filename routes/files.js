@@ -55,6 +55,8 @@ router.get("/upload", ensureAuthenticated, async (req, res) => {
       selectedFolderId: req.query.folderId || null
     });
   } catch (error) {
+    console.error('Get upload form error:', error);
+    req.session.error_msg = 'Error loading upload page';
     res.redirect("/dashboard");
   }
 });
@@ -65,24 +67,33 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
       const message = err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE" 
         ? "File too large. Maximum size is 10MB." 
         : err.message || "Error uploading file";
+      req.session.error_msg = message;
       return res.redirect("/files/upload");
     }
 
     if (!req.file) {
+      req.session.error_msg = 'Please select a file to upload';
       return res.redirect("/files/upload");
     }
 
     try {
-      const { folderId } = req.body;
+      const { folderId, displayName } = req.body;
 
+      // Validate folder ownership if folderId is provided
       if (folderId && folderId.trim()) {
         const folder = await prisma.folder.findFirst({
           where: { id: folderId, userId: req.user.id },
         });
         if (!folder) {
+          req.session.error_msg = 'Invalid folder selected';
           return res.redirect("/files/upload");
         }
       }
+
+      // Use displayName if provided, otherwise fall back to original name
+      const finalDisplayName = displayName && displayName.trim() 
+        ? displayName.trim() 
+        : req.file.originalname;
 
       const publicId = req.file.public_id || req.file.filename || req.file.key || `${Date.now()}_${req.file.originalname}`;
       const secureUrl = req.file.secure_url || req.file.url || req.file.path || req.file.location;
@@ -95,6 +106,7 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
       await prisma.file.create({
         data: {
           originalName: req.file.originalname,
+          displayName: finalDisplayName,
           filename: publicId,
           mimetype: req.file.mimetype,
           size: req.file.size,
@@ -106,8 +118,17 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         },
       });
 
-      res.redirect(folderId && folderId.trim() ? `/folders/${folderId}` : "/dashboard");
+      req.session.success_msg = 'File uploaded successfully';
+      
+      // Redirect to folder or dashboard
+      if (folderId && folderId.trim()) {
+        res.redirect(`/folders/${folderId}`);
+      } else {
+        res.redirect("/dashboard");
+      }
     } catch (error) {
+      console.error('Upload file error:', error);
+      req.session.error_msg = 'Error uploading file';
       res.redirect("/files/upload");
     }
   });
@@ -120,17 +141,20 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
     });
 
     if (!file) {
+      req.session.error_msg = 'File not found';
       return res.redirect("/dashboard");
     }
 
-    let downloadUrl = file.cloudinaryUrl;
-    if (downloadUrl.includes("/upload/")) {
-      downloadUrl = downloadUrl.replace("/upload/", "/upload/fl_attachment/");
-    }
+    // Generate a download URL with the original filename
+    const downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
+      flags: 'attachment',
+      resource_type: file.cloudinaryResourceType || 'auto'
+    });
 
-    res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
     res.redirect(downloadUrl);
   } catch (error) {
+    console.error('Download file error:', error);
+    req.session.error_msg = 'Error downloading file';
     res.redirect("/dashboard");
   }
 });
@@ -139,9 +163,11 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
   try {
     const file = await prisma.file.findFirst({
       where: { id: req.params.id, userId: req.user.id },
+      include: { folder: true }
     });
 
     if (!file) {
+      req.session.error_msg = 'File not found';
       return res.redirect("/dashboard");
     }
 
@@ -151,12 +177,22 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
       });
     } catch (cloudinaryError) {
       console.error("Cloudinary deletion error:", cloudinaryError);
+      // Continue with database deletion even if Cloudinary deletion fails
     }
 
     await prisma.file.delete({ where: { id: req.params.id } });
 
-    res.redirect("/dashboard");
+    req.session.success_msg = 'File deleted successfully';
+    
+    // Redirect to folder or dashboard
+    if (file.folderId) {
+      res.redirect(`/folders/${file.folderId}`);
+    } else {
+      res.redirect("/dashboard");
+    }
   } catch (error) {
+    console.error('Delete file error:', error);
+    req.session.error_msg = 'Error deleting file';
     res.redirect("/dashboard");
   }
 });

@@ -97,24 +97,10 @@
                             <%= displayFileName.length > 20 ? displayFileName.substring(0, 20) + '...' : displayFileName %>
                         </h6>
                         
-                        <!-- Show original name if different from display name -->
-                        <% if (file.displayName && file.displayName !== file.originalName) { %>
-                            <small class="text-muted" style="font-size: 0.75rem;" title="Original: <%= file.originalName %>">
-                                Original: <%= file.originalName.length > 15 ? file.originalName.substring(0, 15) + '...' : file.originalName %>
-                            </small>
-                        <% } %>
-                        
                         <small class="text-muted flex-grow-1">
                             <%= (file.size / 1024).toFixed(1) %> KB<br>
                             <small><%= new Date(file.createdAt).toLocaleDateString() %></small>
                         </small>
-                        
-                        <!-- Cloud storage indicator -->
-                        <div class="mb-2">
-                            <span class="badge bg-success">
-                                <i class="fas fa-cloud"></i> Cloud
-                            </span>
-                        </div>
                         
                         <div class="mt-auto">
                             <!-- Action buttons -->
@@ -164,6 +150,18 @@
                     <div class="card-body">
                         <h6><i class="fas fa-chart-bar"></i> Storage Summary</h6>
                         <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="border-end">
+                                    <h4 class="text-primary"><%= files.length %></h4>
+                                    <small class="text-muted">Files</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border-end">
+                                    <h4 class="text-warning"><%= folders.length %></h4>
+                                    <small class="text-muted">Folders</small>
+                                </div>
+                            </div>
                             <div class="col-md-3">
                                 <div class="border-end">
                                     <h4 class="text-success">
@@ -401,16 +399,4 @@
         }
     </script>
 </body>
-</html>class="text-primary"><%= files.length %></h4>
-                                    <small class="text-muted">Files</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="border-end">
-                                    <h4 class="text-warning"><%= folders.length %></h4>
-                                    <small class="text-muted">Folders</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="border-end">
-                                    <h4
+</html>

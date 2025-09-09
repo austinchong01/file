@@ -32,21 +32,6 @@
             </ol>
         </nav>
 
-        <!-- Flash Messages -->
-        <% if (success_msg && success_msg.length > 0) { %>
-            <div class="alert alert-success alert-dismissible fade show">
-                <%= success_msg %>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <% } %>
-        
-        <% if (error_msg && error_msg.length > 0) { %>
-            <div class="alert alert-danger alert-dismissible fade show">
-                <%= error_msg %>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        <% } %>
-
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="card">
@@ -55,6 +40,12 @@
                     </div>
                     <div class="card-body">
                         <form action="/files/upload" method="POST" enctype="multipart/form-data">
+
+                            <div class="mb-3">
+                                <label for="displayName" class="form-label">Display Name</label>
+                                <input type="text" class="form-control" id="displayName" name="displayName">
+                            </div>
+
                             <div class="mb-3">
                                 <label for="file" class="form-label">Select File</label>
                                 <input type="file" class="form-control" id="file" name="file" required
@@ -63,15 +54,6 @@
                                 <div class="form-text">
                                     <strong>Supported formats:</strong> Images (JPG, PNG, GIF), Documents (PDF, DOC, DOCX, TXT), Media (MP4, MP3)
                                     <br><strong>Maximum file size:</strong> 10MB
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="displayName" class="form-label">Display Name</label>
-                                <input type="text" class="form-control" id="displayName" name="displayName" 
-                                       placeholder="Enter a custom name for your file (optional)">
-                                <div class="form-text">
-                                    If left empty, the original filename will be used. This name will be displayed on your dashboard.
                                 </div>
                             </div>
                             
@@ -123,20 +105,6 @@
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-
-                <!-- Upload Tips -->
-                <div class="card mt-3">
-                    <div class="card-body">
-                        <h6><i class="fas fa-info-circle text-info"></i> Upload Tips</h6>
-                        <ul class="mb-0 small text-muted">
-                            <li>Files are securely stored in the cloud with global CDN access</li>
-                            <li>You can customize the display name to make files easier to identify</li>
-                            <li>The original filename is preserved for download purposes</li>
-                            <li>Images are automatically optimized for web viewing</li>
-                            <li>All file types support direct download and sharing</li>
-                        </ul>
                     </div>
                 </div>
             </div>
