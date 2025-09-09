@@ -15,7 +15,7 @@ const storage = new CloudinaryStorage({
                         file.mimetype.includes("document") || 
                         file.mimetype.includes("text") || 
                         file.mimetype.includes("zip") || 
-                        file.mimetype.includes("word") || 
+                        file.mimetype.includes("word") ||  
                         file.mimetype.includes("excel") || 
                         file.mimetype.includes("powerpoint") ? "raw" : "auto";
 
@@ -55,7 +55,6 @@ router.get("/upload", ensureAuthenticated, async (req, res) => {
       selectedFolderId: req.query.folderId || null
     });
   } catch (error) {
-    req.flash("error_msg", "Error loading upload page");
     res.redirect("/dashboard");
   }
 });
@@ -66,12 +65,10 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
       const message = err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE" 
         ? "File too large. Maximum size is 10MB." 
         : err.message || "Error uploading file";
-      req.flash("error_msg", message);
       return res.redirect("/files/upload");
     }
 
     if (!req.file) {
-      req.flash("error_msg", "Please select a file");
       return res.redirect("/files/upload");
     }
 
@@ -83,7 +80,6 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
           where: { id: folderId, userId: req.user.id },
         });
         if (!folder) {
-          req.flash("error_msg", "Invalid folder selected");
           return res.redirect("/files/upload");
         }
       }
@@ -110,10 +106,8 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         },
       });
 
-      req.flash("success_msg", "File uploaded successfully");
       res.redirect(folderId && folderId.trim() ? `/folders/${folderId}` : "/dashboard");
     } catch (error) {
-      req.flash("error_msg", "Error saving file information");
       res.redirect("/files/upload");
     }
   });
@@ -126,7 +120,6 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
     });
 
     if (!file) {
-      req.flash("error_msg", "File not found");
       return res.redirect("/dashboard");
     }
 
@@ -138,7 +131,6 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
     res.redirect(downloadUrl);
   } catch (error) {
-    req.flash("error_msg", "Error downloading file");
     res.redirect("/dashboard");
   }
 });
@@ -150,7 +142,6 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
     });
 
     if (!file) {
-      req.flash("error_msg", "File not found");
       return res.redirect("/dashboard");
     }
 
@@ -164,10 +155,8 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
 
     await prisma.file.delete({ where: { id: req.params.id } });
 
-    req.flash("success_msg", "File deleted successfully");
     res.redirect("/dashboard");
   } catch (error) {
-    req.flash("error_msg", "Error deleting file");
     res.redirect("/dashboard");
   }
 });

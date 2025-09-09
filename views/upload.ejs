@@ -58,10 +58,20 @@
                             <div class="mb-3">
                                 <label for="file" class="form-label">Select File</label>
                                 <input type="file" class="form-control" id="file" name="file" required
-                                       accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt,.mp4,.mp3">
+                                       accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt,.mp4,.mp3"
+                                       onchange="updateFileName()">
                                 <div class="form-text">
                                     <strong>Supported formats:</strong> Images (JPG, PNG, GIF), Documents (PDF, DOC, DOCX, TXT), Media (MP4, MP3)
                                     <br><strong>Maximum file size:</strong> 10MB
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="displayName" class="form-label">Display Name</label>
+                                <input type="text" class="form-control" id="displayName" name="displayName" 
+                                       placeholder="Enter a custom name for your file (optional)">
+                                <div class="form-text">
+                                    If left empty, the original filename will be used. This name will be displayed on your dashboard.
                                 </div>
                             </div>
                             
@@ -76,6 +86,31 @@
                                         </option>
                                     <% }); %>
                                 </select>
+                            </div>
+
+                            <!-- File Preview Section -->
+                            <div id="filePreview" class="mb-3" style="display: none;">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title"><i class="fas fa-eye"></i> File Preview</h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <strong>Original Name:</strong> <span id="originalName">-</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>Display Name:</strong> <span id="previewDisplayName">-</span>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-md-6">
+                                                <strong>File Type:</strong> <span id="fileType">-</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>File Size:</strong> <span id="fileSize">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="d-flex justify-content-between">
@@ -97,9 +132,10 @@
                         <h6><i class="fas fa-info-circle text-info"></i> Upload Tips</h6>
                         <ul class="mb-0 small text-muted">
                             <li>Files are securely stored in the cloud with global CDN access</li>
+                            <li>You can customize the display name to make files easier to identify</li>
+                            <li>The original filename is preserved for download purposes</li>
                             <li>Images are automatically optimized for web viewing</li>
                             <li>All file types support direct download and sharing</li>
-                            <li>Upload progress may vary based on file size and connection speed</li>
                         </ul>
                     </div>
                 </div>
@@ -109,8 +145,48 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Upload Progress Enhancement -->
     <script>
+        function updateFileName() {
+            const fileInput = document.getElementById('file');
+            const displayNameInput = document.getElementById('displayName');
+            const filePreview = document.getElementById('filePreview');
+            
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileName = file.name;
+                const fileType = file.type || 'Unknown';
+                const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                
+                // Update preview
+                document.getElementById('originalName').textContent = fileName;
+                document.getElementById('fileType').textContent = fileType;
+                document.getElementById('fileSize').textContent = fileSize;
+                
+                // Auto-suggest display name if empty
+                if (!displayNameInput.value.trim()) {
+                    displayNameInput.value = fileName;
+                }
+                
+                // Show preview
+                filePreview.style.display = 'block';
+                updatePreviewDisplayName();
+            } else {
+                filePreview.style.display = 'none';
+            }
+        }
+        
+        function updatePreviewDisplayName() {
+            const displayNameInput = document.getElementById('displayName');
+            const previewDisplayName = document.getElementById('previewDisplayName');
+            
+            previewDisplayName.textContent = displayNameInput.value.trim() || 
+                                           document.getElementById('originalName').textContent;
+        }
+        
+        // Update preview when display name changes
+        document.getElementById('displayName').addEventListener('input', updatePreviewDisplayName);
+        
+        // Form submission enhancement
         document.querySelector('form').addEventListener('submit', function(e) {
             const submitBtn = document.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;

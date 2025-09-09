@@ -4,7 +4,6 @@ const session = require('express-session');
 const { PrismaSessionStore } = require('@quixo3/prisma-session-store');
 const { PrismaClient } = require('@prisma/client');
 const passport = require('passport');
-const flash = require('express-flash');
 const methodOverride = require('method-override');
 
 const app = express();
@@ -31,13 +30,21 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(flash());
 
+// Simple message system (optional replacement for flash)
 app.use((req, res, next) => {
   res.locals.user = req.user || null;
-  res.locals.success_msg = req.flash('success_msg');
-  res.locals.error_msg = req.flash('error_msg');
-  res.locals.error = req.flash('error');
+  
+  // Get messages from session and clear them
+  res.locals.success_msg = req.session.success_msg || '';
+  res.locals.error_msg = req.session.error_msg || '';
+  res.locals.error = req.session.error || '';
+  
+  // Clear messages after setting them
+  delete req.session.success_msg;
+  delete req.session.error_msg;
+  delete req.session.error;
+  
   next();
 });
 

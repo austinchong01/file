@@ -36,10 +36,8 @@ exports.postRegister = async (req, res) => {
       }
     });
 
-    req.flash('success_msg', 'You are now registered and can log in');
     res.redirect('/auth/login');
   } catch (error) {
-    req.flash('error_msg', 'Something went wrong during registration. Please try again.');
     res.redirect('/auth/register');
   }
 };
@@ -47,7 +45,6 @@ exports.postRegister = async (req, res) => {
 exports.logout = (req, res, next) => {
   req.logout((err) => {
     if (err) return next(err);
-    req.flash('success_msg', 'You have been logged out successfully');
     res.redirect('/auth/login');
   });
 };

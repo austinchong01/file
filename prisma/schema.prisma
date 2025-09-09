@@ -52,12 +52,13 @@ model Folder {
 model File {
   id                      String   @id @default(cuid())
   originalName            String
+  displayName             String?  // NEW: Custom display name for the file
   filename                String   // Cloudinary public_id
   mimetype                String
   size                    Int
   cloudinaryUrl           String   // Cloudinary URL
   cloudinaryPublicId      String   // Cloudinary public_id (same as filename)
-  cloudinaryResourceType  String?  // NEW: Store the resource type used in Cloudinary
+  cloudinaryResourceType  String?  // Store the resource type used in Cloudinary
   userId                  String
   folderId                String?
   createdAt               DateTime @default(now())

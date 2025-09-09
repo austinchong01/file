@@ -37,10 +37,8 @@ router.post('/register', async (req, res) => {
       }
     });
 
-    req.flash('success_msg', 'You are now registered and can log in');
     res.redirect('/auth/login');
   } catch (error) {
-    req.flash('error_msg', 'Something went wrong');
     res.redirect('/auth/register');
   }
 });
@@ -54,7 +52,6 @@ router.post('/login', passport.authenticate('local', {
 router.get('/logout', (req, res) => {
   req.logout(err => {
     if (err) return next(err);
-    req.flash('success_msg', 'You are logged out');
     res.redirect('/auth/login');
   });
 });

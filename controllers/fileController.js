@@ -20,7 +20,7 @@ exports.getUploadForm = async (req, res) => {
     });
   } catch (error) {
     console.error('Get upload form error:', error);
-    req.flash('error_msg', 'Error loading upload page');
+    req.session.error_msg = 'Error loading upload page';
     res.redirect('/dashboard');
   }
 };
@@ -29,11 +29,11 @@ exports.getUploadForm = async (req, res) => {
 exports.uploadFile = async (req, res) => {
   try {
     if (!req.file) {
-      req.flash('error_msg', 'Please select a file to upload');
+      req.session.error_msg = 'Please select a file to upload';
       return res.redirect('/files/upload');
     }
 
-    const { folderId } = req.body;
+    const { folderId, displayName } = req.body;
     const userId = req.user.id;
 
     // Validate folder ownership if folderId is provided
@@ -43,15 +43,21 @@ exports.uploadFile = async (req, res) => {
       });
       
       if (!folder) {
-        req.flash('error_msg', 'Invalid folder selected');
+        req.session.error_msg = 'Invalid folder selected';
         return res.redirect('/files/upload');
       }
     }
+
+    // Use displayName if provided, otherwise fall back to original name
+    const finalDisplayName = displayName && displayName.trim() 
+      ? displayName.trim() 
+      : req.file.originalname;
 
     // File is already uploaded to Cloudinary via multer middleware
     // req.file contains the Cloudinary response
     const fileData = {
       originalName: req.file.originalname,
+      displayName: finalDisplayName,
       filename: req.file.filename, // Cloudinary public_id
       mimetype: req.file.mimetype,
       size: req.file.size,
@@ -66,7 +72,7 @@ exports.uploadFile = async (req, res) => {
       data: fileData
     });
 
-    req.flash('success_msg', 'File uploaded successfully');
+    req.session.success_msg = 'File uploaded successfully';
     
     // Redirect to folder or dashboard
     if (folderId) {
@@ -76,7 +82,7 @@ exports.uploadFile = async (req, res) => {
     }
   } catch (error) {
     console.error('Upload file error:', error);
-    req.flash('error_msg', 'Error uploading file');
+    req.session.error_msg = 'Error uploading file';
     res.redirect('/files/upload');
   }
 };
@@ -92,7 +98,7 @@ exports.downloadFile = async (req, res) => {
     });
 
     if (!file) {
-      req.flash('error_msg', 'File not found');
+      req.session.error_msg = 'File not found';
       return res.redirect('/dashboard');
     }
 
@@ -105,7 +111,7 @@ exports.downloadFile = async (req, res) => {
     res.redirect(downloadUrl);
   } catch (error) {
     console.error('Download file error:', error);
-    req.flash('error_msg', 'Error downloading file');
+    req.session.error_msg = 'Error downloading file';
     res.redirect('/dashboard');
   }
 };
@@ -122,7 +128,7 @@ exports.deleteFile = async (req, res) => {
     });
 
     if (!file) {
-      req.flash('error_msg', 'File not found');
+      req.session.error_msg = 'File not found';
       return res.redirect('/dashboard');
     }
 
@@ -139,7 +145,7 @@ exports.deleteFile = async (req, res) => {
     // Delete file record from database
     await prisma.file.delete({ where: { id: fileId } });
 
-    req.flash('success_msg', 'File deleted successfully');
+    req.session.success_msg = 'File deleted successfully';
     
     // Redirect to folder or dashboard
     if (file.folderId) {
@@ -149,7 +155,7 @@ exports.deleteFile = async (req, res) => {
     }
   } catch (error) {
     console.error('Delete file error:', error);
-    req.flash('error_msg', 'Error deleting file');
+    req.session.error_msg = 'Error deleting file';
     res.redirect('/dashboard');
   }
 };

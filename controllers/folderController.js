@@ -7,7 +7,7 @@ exports.createFolder = async (req, res) => {
     const userId = req.user.id;
 
     if (!name || name.trim() === '') {
-      req.flash('error_msg', 'Folder name is required');
+      req.session.error_msg = 'Folder name is required';
       return res.redirect(parentId ? `/folders/${parentId}` : '/dashboard');
     }
 
@@ -16,7 +16,7 @@ exports.createFolder = async (req, res) => {
     });
 
     if (existingFolder) {
-      req.flash('error_msg', 'A folder with this name already exists in this location');
+      req.session.error_msg = 'A folder with this name already exists in this location';
       return res.redirect(parentId ? `/folders/${parentId}` : '/dashboard');
     }
 
@@ -29,10 +29,10 @@ exports.createFolder = async (req, res) => {
       }
     });
 
-    req.flash('success_msg', 'Folder created successfully');
+    req.session.success_msg = 'Folder created successfully';
     res.redirect(parentId ? `/folders/${parentId}` : '/dashboard');
   } catch (error) {
-    req.flash('error_msg', 'Error creating folder');
+    req.session.error_msg = 'Error creating folder';
     res.redirect('/dashboard');
   }
 };
@@ -49,7 +49,7 @@ exports.getFolderContents = async (req, res) => {
     });
 
     if (!folder) {
-      req.flash('error_msg', 'Folder not found');
+      req.session.error_msg = 'Folder not found';
       return res.redirect('/dashboard');
     }
 
@@ -60,7 +60,7 @@ exports.getFolderContents = async (req, res) => {
       files: folder.files
     });
   } catch (error) {
-    req.flash('error_msg', 'Error loading folder');
+    req.session.error_msg = 'Error loading folder';
     res.redirect('/dashboard');
   }
 };
@@ -75,12 +75,12 @@ exports.updateFolder = async (req, res) => {
     });
 
     if (!folder) {
-      req.flash('error_msg', 'Folder not found');
+      req.session.error_msg = 'Folder not found';
       return res.redirect('/dashboard');
     }
 
     if (!name || name.trim() === '') {
-      req.flash('error_msg', 'Folder name is required');
+      req.session.error_msg = 'Folder name is required';
       return res.redirect(`/folders/${folderId}`);
     }
 
@@ -89,7 +89,7 @@ exports.updateFolder = async (req, res) => {
     });
 
     if (existingFolder) {
-      req.flash('error_msg', 'A folder with this name already exists in this location');
+      req.session.error_msg = 'A folder with this name already exists in this location';
       return res.redirect(`/folders/${folderId}`);
     }
 
@@ -98,10 +98,10 @@ exports.updateFolder = async (req, res) => {
       data: { name: name.trim(), description: description?.trim() || null }
     });
 
-    req.flash('success_msg', 'Folder updated successfully');
+    req.session.success_msg = 'Folder updated successfully';
     res.redirect(`/folders/${folderId}`);
   } catch (error) {
-    req.flash('error_msg', 'Error updating folder');
+    req.session.error_msg = 'Error updating folder';
     res.redirect('/dashboard');
   }
 };
@@ -116,21 +116,21 @@ exports.deleteFolder = async (req, res) => {
     });
 
     if (!folder) {
-      req.flash('error_msg', 'Folder not found');
+      req.session.error_msg = 'Folder not found';
       return res.redirect('/dashboard');
     }
 
     if (folder.children.length > 0 || folder.files.length > 0) {
-      req.flash('error_msg', 'Cannot delete folder with contents. Please move or delete all files and subfolders first.');
+      req.session.error_msg = 'Cannot delete folder with contents. Please move or delete all files and subfolders first.';
       return res.redirect(`/folders/${folderId}`);
     }
 
     await prisma.folder.delete({ where: { id: folderId } });
 
-    req.flash('success_msg', 'Folder deleted successfully');
+    req.session.success_msg = 'Folder deleted successfully';
     res.redirect(folder.parentId ? `/folders/${folder.parentId}` : '/dashboard');
   } catch (error) {
-    req.flash('error_msg', 'Error deleting folder');
+    req.session.error_msg = 'Error deleting folder';
     res.redirect('/dashboard');
   }
 };

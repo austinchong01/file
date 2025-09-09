@@ -11,7 +11,7 @@ router.post('/create', ensureAuthenticated, async (req, res) => {
     const { name, description, parentId } = req.body;
 
     if (!name) {
-      req.flash('error_msg', 'Folder name is required');
+      req.session.error_msg = 'Folder name is required';
       return res.redirect('/dashboard');
     }
 
@@ -24,11 +24,11 @@ router.post('/create', ensureAuthenticated, async (req, res) => {
       }
     });
 
-    req.flash('success_msg', 'Folder created successfully');
+    req.session.success_msg = 'Folder created successfully';
     res.redirect('/dashboard');
   } catch (error) {
     console.error(error);
-    req.flash('error_msg', 'Error creating folder');
+    req.session.error_msg = 'Error creating folder';
     res.redirect('/dashboard');
   }
 });
@@ -46,7 +46,7 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
     });
 
     if (!folder) {
-      req.flash('error_msg', 'Folder not found');
+      req.session.error_msg = 'Folder not found';
       return res.redirect('/dashboard');
     }
 
@@ -58,7 +58,7 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    req.flash('error_msg', 'Error loading folder');
+    req.session.error_msg = 'Error loading folder';
     res.redirect('/dashboard');
   }
 });
@@ -73,7 +73,7 @@ router.put('/:id', ensureAuthenticated, async (req, res) => {
     });
 
     if (!folder) {
-      req.flash('error_msg', 'Folder not found');
+      req.session.error_msg = 'Folder not found';
       return res.redirect('/dashboard');
     }
 
@@ -85,11 +85,11 @@ router.put('/:id', ensureAuthenticated, async (req, res) => {
       }
     });
 
-    req.flash('success_msg', 'Folder updated successfully');
+    req.session.success_msg = 'Folder updated successfully';
     res.redirect('/dashboard');
   } catch (error) {
     console.error(error);
-    req.flash('error_msg', 'Error updating folder');
+    req.session.error_msg = 'Error updating folder';
     res.redirect('/dashboard');
   }
 });
@@ -103,22 +103,22 @@ router.delete('/:id', ensureAuthenticated, async (req, res) => {
     });
 
     if (!folder) {
-      req.flash('error_msg', 'Folder not found');
+      req.session.error_msg = 'Folder not found';
       return res.redirect('/dashboard');
     }
 
     if (folder.children.length > 0 || folder.files.length > 0) {
-      req.flash('error_msg', 'Cannot delete folder with contents');
+      req.session.error_msg = 'Cannot delete folder with contents';
       return res.redirect('/dashboard');
     }
 
     await prisma.folder.delete({ where: { id: req.params.id } });
 
-    req.flash('success_msg', 'Folder deleted successfully');
+    req.session.success_msg = 'Folder deleted successfully';
     res.redirect('/dashboard');
   } catch (error) {
     console.error(error);
-    req.flash('error_msg', 'Error deleting folder');
+    req.session.error_msg = 'Error deleting folder';
     res.redirect('/dashboard');
   }
 });

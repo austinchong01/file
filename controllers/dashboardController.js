@@ -20,7 +20,6 @@ exports.getDashboard = async (req, res) => {
     res.render('dashboard', { title: 'Dashboard', folders, files });
   } catch (error) {
     console.error('Dashboard error:', error);
-    req.flash('error_msg', 'Error loading dashboard');
     res.render('dashboard', { title: 'Dashboard', folders: [], files: [] });
   }
 };
