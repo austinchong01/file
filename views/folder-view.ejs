@@ -70,19 +70,18 @@
             <div class="col-md-3 mb-3">
                 <div class="card h-100">
                     <div class="card-body text-center d-flex flex-column">
-                        <i class="fas fa-folder fa-3x text-warning mb-2"></i>
+                        <a href="/folders/<%= subfolder.id %>" class="text-decoration-none">
+                            <i class="fas fa-folder fa-3x text-warning mb-2" style="cursor: pointer;"></i>
+                        </a>
                         <h6 class="card-title"><%= subfolder.name %></h6>
                         <% if (subfolder.description) { %>
                             <small class="text-muted flex-grow-1"><%= subfolder.description %></small>
                         <% } %>
                         <div class="mt-auto">
-                            <a href="/folders/<%= subfolder.id %>" class="btn btn-sm btn-primary me-1">
-                                <i class="fas fa-folder-open"></i> Open
-                            </a>
                             <form method="POST" action="/folders/<%= subfolder.id %>?_method=DELETE" class="d-inline">
                                 <button type="submit" class="btn btn-sm btn-danger" 
                                         onclick="return confirm('Delete folder and all its contents?')">
-                                    <i class="fas fa-trash"></i>
+                                    <i class="fas fa-trash"></i> Delete
                                 </button>
                             </form>
                         </div>
@@ -113,18 +112,17 @@
                             <small><%= new Date(file.createdAt).toLocaleDateString() %></small>
                         </small>
                         <div class="mt-auto">
-                            <a href="/files/<%= file.id %>" class="btn btn-sm btn-info me-1">
-                                <i class="fas fa-info-circle"></i>
-                            </a>
-                            <a href="/files/<%= file.id %>/download" class="btn btn-sm btn-success me-1">
-                                <i class="fas fa-download"></i>
-                            </a>
-                            <form method="POST" action="/files/<%= file.id %>?_method=DELETE" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-danger" 
-                                        onclick="return confirm('Delete this file?')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                            <div class="btn-group w-100" role="group">
+                                <a href="/files/<%= file.id %>/download" class="btn btn-sm btn-success" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <form method="POST" action="/files/<%= file.id %>?_method=DELETE" class="flex-fill">
+                                    <button type="submit" class="btn btn-sm btn-danger w-100" 
+                                            onclick="return confirm('Delete this file?')" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -182,6 +180,129 @@
         </div>
     </div>
 
+    <!-- File Preview Modal -->
+    <div class="modal fade" id="filePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="previewFileName">File Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="previewContent">
+                    <!-- Preview content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <a href="#" id="downloadLink" class="btn btn-success">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // File preview function
+        function previewFile(fileId, fileName, mimetype, cloudinaryUrl, fileSize) {
+            const modal = new bootstrap.Modal(document.getElementById('filePreviewModal'));
+            const previewContent = document.getElementById('previewContent');
+            const previewFileName = document.getElementById('previewFileName');
+            const downloadLink = document.getElementById('downloadLink');
+            
+            // Set modal title and download link
+            previewFileName.textContent = fileName;
+            downloadLink.href = `/files/${fileId}/download`;
+            
+            // Generate preview content based on file type
+            let content = '';
+            
+            if (mimetype.startsWith('image/')) {
+                content = `
+                    <div class="text-center">
+                        <img src="${cloudinaryUrl}" alt="${fileName}" class="img-fluid rounded shadow" style="max-height: 400px;">
+                        <div class="mt-2">
+                            <small class="text-muted">Size: ${fileSize} KB</small>
+                        </div>
+                    </div>
+                `;
+            } else if (mimetype === 'application/pdf') {
+                content = `
+                    <div class="text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-file-pdf fa-5x text-danger"></i>
+                        </div>
+                        <h5>${fileName}</h5>
+                        <p class="text-muted">PDF Document • ${fileSize} KB</p>
+                        <a href="${cloudinaryUrl}" target="_blank" class="btn btn-outline-primary">
+                            <i class="fas fa-external-link-alt"></i> Open in New Tab
+                        </a>
+                    </div>
+                `;
+            } else if (mimetype.startsWith('video/')) {
+                content = `
+                    <div class="text-center">
+                        <video controls class="w-100" style="max-height: 400px;">
+                            <source src="${cloudinaryUrl}" type="${mimetype}">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="mt-2">
+                            <small class="text-muted">Size: ${fileSize} KB</small>
+                        </div>
+                    </div>
+                `;
+            } else if (mimetype.startsWith('audio/')) {
+                content = `
+                    <div class="text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-file-audio fa-5x text-success"></i>
+                        </div>
+                        <h5>${fileName}</h5>
+                        <audio controls class="w-100 mt-3">
+                            <source src="${cloudinaryUrl}" type="${mimetype}">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div class="mt-2">
+                            <small class="text-muted">Size: ${fileSize} KB</small>
+                        </div>
+                    </div>
+                `;
+            } else if (mimetype.startsWith('text/') || mimetype.includes('document')) {
+                let iconClass = 'fa-file';
+                let iconColor = 'text-secondary';
+                if (mimetype.includes('word')) { iconClass = 'fa-file-word'; iconColor = 'text-primary'; }
+                else if (mimetype.includes('excel')) { iconClass = 'fa-file-excel'; iconColor = 'text-success'; }
+                else if (mimetype.includes('powerpoint')) { iconClass = 'fa-file-powerpoint'; iconColor = 'text-warning'; }
+                
+                content = `
+                    <div class="text-center">
+                        <div class="mb-3">
+                            <i class="fas ${iconClass} fa-5x ${iconColor}"></i>
+                        </div>
+                        <h5>${fileName}</h5>
+                        <p class="text-muted">Document • ${fileSize} KB</p>
+                        <p class="text-muted">Preview not available for this document type</p>
+                        <a href="${cloudinaryUrl}" target="_blank" class="btn btn-outline-primary">
+                            <i class="fas fa-external-link-alt"></i> Open in New Tab
+                        </a>
+                    </div>
+                `;
+            } else {
+                content = `
+                    <div class="text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-file fa-5x text-secondary"></i>
+                        </div>
+                        <h5>${fileName}</h5>
+                        <p class="text-muted">${mimetype} • ${fileSize} KB</p>
+                        <p class="text-muted">Preview not available for this file type</p>
+                    </div>
+                `;
+            }
+            
+            previewContent.innerHTML = content;
+            modal.show();
+        }
+    </script>
 </body>
 </html>

@@ -81,33 +81,6 @@ exports.uploadFile = async (req, res) => {
   }
 };
 
-// Get file details
-exports.getFileDetails = async (req, res) => {
-  try {
-    const fileId = req.params.id;
-    const userId = req.user.id;
-
-    const file = await prisma.file.findFirst({
-      where: { id: fileId, userId },
-      include: { folder: true }
-    });
-
-    if (!file) {
-      req.flash('error_msg', 'File not found');
-      return res.redirect('/dashboard');
-    }
-
-    res.render('file-details', { 
-      title: `File: ${file.originalName}`,
-      file 
-    });
-  } catch (error) {
-    console.error('Get file details error:', error);
-    req.flash('error_msg', 'Error loading file details');
-    res.redirect('/dashboard');
-  }
-};
-
 // Download file (redirect to Cloudinary URL)
 exports.downloadFile = async (req, res) => {
   try {

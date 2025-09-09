@@ -143,25 +143,6 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
   }
 });
 
-router.get("/:id", ensureAuthenticated, async (req, res) => {
-  try {
-    const file = await prisma.file.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
-      include: { folder: true },
-    });
-
-    if (!file) {
-      req.flash("error_msg", "File not found");
-      return res.redirect("/dashboard");
-    }
-
-    res.render("file-details", { title: `File: ${file.originalName}`, file });
-  } catch (error) {
-    req.flash("error_msg", "Error loading file");
-    res.redirect("/dashboard");
-  }
-});
-
 router.delete("/:id", ensureAuthenticated, async (req, res) => {
   try {
     const file = await prisma.file.findFirst({
