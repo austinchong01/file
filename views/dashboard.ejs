@@ -88,7 +88,9 @@
                         else if (file.mimetype.includes('excel')) { iconClass = 'fa-file-excel'; iconColor = 'text-success'; }
                         else if (file.mimetype.includes('powerpoint')) { iconClass = 'fa-file-powerpoint'; iconColor = 'text-warning'; }
                         %>
-                        <i class="fas <%= iconClass %> fa-3x <%= iconColor %> mb-2"></i>
+                        <i class="fas <%= iconClass %> fa-3x <%= iconColor %> mb-2" 
+                           style="cursor: pointer;" 
+                           onclick="console.log('clicked')"></i>
                         
                         <h6 class="card-title" title="<%= file.originalName %>">
                             <%= file.originalName.length > 20 ? file.originalName.substring(0, 20) + '...' : file.originalName %>

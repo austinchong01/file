@@ -103,7 +103,9 @@
                         else if (file.mimetype === 'application/pdf') iconClass = 'fa-file-pdf text-danger';
                         else iconClass = 'fa-file text-secondary';
                         %>
-                        <i class="fas <%= iconClass %> fa-3x mb-2"></i>
+                        <i class="fas <%= iconClass %> fa-3x mb-2" 
+                           style="cursor: pointer;" 
+                           onclick="console.log('clicked')"></i>
                         <h6 class="card-title" title="<%= file.originalName %>">
                             <%= file.originalName.length > 20 ? file.originalName.substring(0, 20) + '...' : file.originalName %>
                         </h6>
