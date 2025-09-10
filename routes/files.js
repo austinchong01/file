@@ -8,21 +8,35 @@ const cloudinary = require("../config/cloudinary");
 const router = express.Router();
 const prisma = new PrismaClient();
 
+const getResourceType = (mimetype) => {
+  if (mimetype.startsWith("image/")) return "image";
+  if (mimetype.startsWith("video/")) return "video";
+  if (
+    mimetype === "application/javascript" ||
+    mimetype === "text/javascript" ||
+    mimetype === "application/x-javascript"
+  )
+    return "javascript";
+  if (mimetype === "text/css") return "css";
+
+  if (
+    mimetype.includes("pdf") ||
+    mimetype.includes("document") ||
+    mimetype.includes("text") ||
+    mimetype.includes("word") ||
+    mimetype.includes("excel") ||
+    mimetype.includes("powerpoint") ||
+    mimetype === "application/zip" ||
+    mimetype === "application/x-zip-compressed"
+  )
+    return "raw";
+  return "raw";
+};
+
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: (req, file) => {
-    const resourceType =
-      file.mimetype.includes("pdf") ||
-      file.mimetype.includes("document") ||
-      file.mimetype.includes("text") ||
-      file.mimetype.includes("zip") ||
-      file.mimetype.includes("word") ||
-      file.mimetype.includes("excel") ||
-      file.mimetype.includes("powerpoint")
-        ? "raw"
-        : "auto";
-    
-        console.log(resourceType)
+    const resourceType = getResourceType(file.mimetype);
     return {
       folder: "file-uploader-test",
       resource_type: resourceType,
@@ -87,7 +101,6 @@ const upload = multer({
   },
 });
 
-
 router.post("/upload", ensureAuthenticated, (req, res) => {
   upload.single("file")(req, res, async (err) => {
     if (err) {
@@ -136,13 +149,7 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         req.file.url ||
         req.file.path ||
         req.file.location;
-      const resourceType =
-        req.file.resource_type ||
-        (req.file.mimetype.includes("pdf") ||
-        req.file.mimetype.includes("document") ||
-        req.file.mimetype.includes("text")
-          ? "raw"
-          : "auto");
+      const resourceType = getResourceType(req.file.mimetype);
 
       await prisma.file.create({
         data: {
@@ -204,6 +211,7 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
       where: { id: req.params.id, userId: req.user.id },
       include: { folder: true },
     });
+    // console.log(file.cloudinaryResourceType);
 
     if (!file) {
       req.session.error_msg = "File not found";
@@ -212,7 +220,7 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
 
     try {
       await cloudinary.uploader.destroy(file.cloudinaryPublicId, {
-        resource_type: file.cloudinaryResourceType || "auto",
+        resource_type: file.cloudinaryResourceType,
       });
     } catch (cloudinaryError) {
       console.error("Cloudinary deletion error:", cloudinaryError);
