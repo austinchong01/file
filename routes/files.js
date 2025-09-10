@@ -85,7 +85,7 @@ const upload = multer({
 router.post("/upload", ensureAuthenticated, (req, res) => {
   upload.single("file")(req, res, async (err) => {
     if (err) {
-      console.error("Multer error:", err);
+      // console.error("Multer error:", err);
       const message =
         err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE"
           ? "File too large. Maximum size is 10MB."
@@ -202,7 +202,7 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
     await prisma.file.delete({ where: { id: req.params.id } });
 
     let message = "File Deleted Successfully" + err;
-    return res.json({ success: true, message });
+    return res.json({ success: true, message, redirectUrl: "/dashboard" });
     
   } catch (error) {
     message = 'Error deleting file' + error
