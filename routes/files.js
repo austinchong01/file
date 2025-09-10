@@ -12,16 +12,6 @@ const prisma = new PrismaClient();
 const getResourceType = (mimetype) => {
   if (mimetype.startsWith("image/")) return "image";
   if (mimetype.startsWith("video/")) return "video";
-  // if (
-  //   mimetype.includes("pdf") ||
-  //   mimetype.includes("document") ||
-  //   mimetype.includes("text") ||
-  //   mimetype.includes("word") ||
-  //   mimetype.includes("excel") ||
-  //   mimetype.includes("powerpoint") ||
-  //   mimetype === "application/zip" ||
-  //   mimetype === "application/x-zip-compressed"
-  // )
   return "raw";
 };
 
@@ -43,7 +33,6 @@ const storage = new CloudinaryStorage({
         "webp",
         "pdf",
         "mp4",
-        "avi",
         "mov",
       ],
     };
@@ -67,7 +56,6 @@ const upload = multer({
       "image/webp",
       "application/pdf",
       "video/mp4",
-      "video/avi",
       "video/quicktime",
     ];
 

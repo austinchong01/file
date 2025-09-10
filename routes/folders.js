@@ -8,28 +8,21 @@ const prisma = new PrismaClient();
 // Create folder
 router.post('/create', ensureAuthenticated, async (req, res) => {
   try {
-    const { name, description, parentId } = req.body;
-
-    if (!name) {
-      req.session.error_msg = 'Folder name is required';
-      return res.redirect('/dashboard');
-    }
+    const { name, parentId } = req.body;
 
     await prisma.folder.create({
       data: {
-        name,
-        description: description || null,
+        name: name,
         userId: req.user.id,
         parentId: parentId || null
       }
     });
 
-    req.session.success_msg = 'Folder created successfully';
-    res.redirect('/dashboard');
+
+    return res.json({ success: true, message: 'Folder created successfully', redirectUrl: "/dashboard" });
   } catch (error) {
     console.error(error);
-    req.session.error_msg = 'Error creating folder';
-    res.redirect('/dashboard');
+    return res.json({ success: false, message: error, redirectUrl: "/dashboard" });
   }
 });
 
@@ -46,16 +39,15 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
     });
 
     if (!folder) {
-      req.session.error_msg = 'Folder not found';
-      return res.redirect('/dashboard');
+      return res.json({ success: false, message: 'Folder not found', redirectUrl: "/dashboard" });
     }
 
-    res.render('folder-view', {
-      title: `Folder: ${folder.name}`,
-      folder,
-      folders: folder.children,
-      files: folder.files
-    });
+    // res.render('folder-view', {
+    //   title: `Folder: ${folder.name}`,
+    //   folder,
+    //   folders: folder.children,
+    //   files: folder.files
+    // });
   } catch (error) {
     console.error(error);
     req.session.error_msg = 'Error loading folder';
@@ -63,34 +55,37 @@ router.get('/:id', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Update folder
-router.put('/:id', ensureAuthenticated, async (req, res) => {
+// Rename folder
+router.post('/rename', ensureAuthenticated, async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { folderId, name } = req.body;
 
+    // Check if folder exists and belongs to user
     const folder = await prisma.folder.findFirst({
-      where: { id: req.params.id, userId: req.user.id }
+      where: { id: folderId, userId: req.user.id }
     });
 
     if (!folder) {
-      req.session.error_msg = 'Folder not found';
-      return res.redirect('/dashboard');
+      return res.json({ success: false, message: 'Folder not found' });
     }
 
+    // Update the folder name
     await prisma.folder.update({
-      where: { id: req.params.id },
-      data: {
-        name: name || folder.name,
-        description: description
-      }
+      where: { id: folderId },
+      data: { name: name.trim() }
     });
 
-    req.session.success_msg = 'Folder updated successfully';
-    res.redirect('/dashboard');
+    return res.json({ 
+      success: true, 
+      message: 'Folder renamed successfully', 
+      redirectUrl: "/dashboard" 
+    });
   } catch (error) {
-    console.error(error);
-    req.session.error_msg = 'Error updating folder';
-    res.redirect('/dashboard');
+    console.error('Rename folder error:', error);
+    return res.json({ 
+      success: false, 
+      message: 'Error renaming folder' 
+    });
   }
 });
 
@@ -103,23 +98,18 @@ router.delete('/:id', ensureAuthenticated, async (req, res) => {
     });
 
     if (!folder) {
-      req.session.error_msg = 'Folder not found';
-      return res.redirect('/dashboard');
+      return res.json({ success: false, message: 'Folder not found', redirectUrl: "/dashboard" });
     }
 
     if (folder.children.length > 0 || folder.files.length > 0) {
-      req.session.error_msg = 'Cannot delete folder with contents';
-      return res.redirect('/dashboard');
+      return res.json({ success: false, message: 'Cannot delete folder with contents', redirectUrl: "/dashboard" });
     }
 
     await prisma.folder.delete({ where: { id: req.params.id } });
 
-    req.session.success_msg = 'Folder deleted successfully';
-    res.redirect('/dashboard');
+    return res.json({ success: true, message: 'Folder deleted successfully', redirectUrl: "/dashboard" });
   } catch (error) {
-    console.error(error);
-    req.session.error_msg = 'Error deleting folder';
-    res.redirect('/dashboard');
+    return res.json({ success: false, message: 'Error deleting folder', redirectUrl: "/dashboard" });
   }
 });
 

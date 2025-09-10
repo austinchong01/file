@@ -35,7 +35,6 @@ model Session {
 model Folder {
   id          String   @id @default(cuid())
   name        String
-  description String?
   userId      String
   parentId    String?
   createdAt   DateTime @default(now())
