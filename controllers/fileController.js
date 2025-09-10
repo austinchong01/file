@@ -30,21 +30,21 @@ exports.uploadFile = async (req, res) => {
   try {
     if (!req.file) {
       req.session.error_msg = 'Please select a file to upload';
-      return res.redirect('/files/upload');
+      return res.redirect('/dashboard');
     }
 
     const { folderId, displayName } = req.body;
     const userId = req.user.id;
 
     // Validate folder ownership if folderId is provided
-    if (folderId) {
+    if (folderId && folderId.trim()) {
       const folder = await prisma.folder.findFirst({
         where: { id: folderId, userId }
       });
       
       if (!folder) {
         req.session.error_msg = 'Invalid folder selected';
-        return res.redirect('/files/upload');
+        return res.redirect('/dashboard');
       }
     }
 
@@ -53,8 +53,25 @@ exports.uploadFile = async (req, res) => {
       ? displayName.trim() 
       : req.file.originalname;
 
+    // Determine the correct resource type based on mimetype
+    let resourceType;
+    if (req.file.mimetype.startsWith("image/")) {
+      resourceType = "image";
+    } else if (req.file.mimetype.startsWith("video/")) {
+      resourceType = "video";
+    } else if (req.file.mimetype === "application/pdf" ||
+               req.file.mimetype.includes("document") ||
+               req.file.mimetype.includes("word") ||
+               req.file.mimetype.includes("excel") ||
+               req.file.mimetype.includes("powerpoint") ||
+               req.file.mimetype.includes("text") ||
+               req.file.mimetype.startsWith("audio/")) {
+      resourceType = "raw";
+    } else {
+      resourceType = "raw"; // Default fallback
+    }
+
     // File is already uploaded to Cloudinary via multer middleware
-    // req.file contains the Cloudinary response
     const fileData = {
       originalName: req.file.originalname,
       displayName: finalDisplayName,
@@ -63,8 +80,9 @@ exports.uploadFile = async (req, res) => {
       size: req.file.size,
       cloudinaryUrl: req.file.path, // Cloudinary URL
       cloudinaryPublicId: req.file.filename, // Cloudinary public_id
+      cloudinaryResourceType: resourceType, // Store the correct resource type
       userId,
-      folderId: folderId || null
+      folderId: folderId && folderId.trim() ? folderId : null
     };
 
     // Save file info to database
@@ -75,7 +93,7 @@ exports.uploadFile = async (req, res) => {
     req.session.success_msg = 'File uploaded successfully';
     
     // Redirect to folder or dashboard
-    if (folderId) {
+    if (folderId && folderId.trim()) {
       res.redirect(`/folders/${folderId}`);
     } else {
       res.redirect('/dashboard');
@@ -83,7 +101,7 @@ exports.uploadFile = async (req, res) => {
   } catch (error) {
     console.error('Upload file error:', error);
     req.session.error_msg = 'Error uploading file';
-    res.redirect('/files/upload');
+    res.redirect('/dashboard');
   }
 };
 
@@ -102,10 +120,13 @@ exports.downloadFile = async (req, res) => {
       return res.redirect('/dashboard');
     }
 
+    // Use the stored resource type for download
+    const resourceType = file.cloudinaryResourceType || 'auto';
+
     // Generate a download URL with the original filename
     const downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
       flags: 'attachment',
-      resource_type: 'auto'
+      resource_type: resourceType
     });
 
     res.redirect(downloadUrl);
@@ -134,14 +155,35 @@ exports.deleteFile = async (req, res) => {
 
     // Delete file from Cloudinary
     try {
+      // Use the stored resource type, or determine it from mimetype as fallback
+      let resourceType = file.cloudinaryResourceType;
+      
+      if (!resourceType) {
+        if (file.mimetype.startsWith("image/")) {
+          resourceType = "image";
+        } else if (file.mimetype.startsWith("video/")) {
+          resourceType = "video";
+        } else if (file.mimetype === "application/pdf" ||
+                   file.mimetype.includes("document") ||
+                   file.mimetype.includes("word") ||
+                   file.mimetype.includes("excel") ||
+                   file.mimetype.includes("powerpoint") ||
+                   file.mimetype.includes("text") ||
+                   file.mimetype.startsWith("audio/")) {
+          resourceType = "raw";
+        } else {
+          resourceType = "raw"; // Default fallback
+        }
+      }
+
       await cloudinary.uploader.destroy(file.cloudinaryPublicId, {
-        resource_type: 'auto'
+        resource_type: resourceType
       });
     } catch (cloudinaryError) {
       console.error('Error deleting file from Cloudinary:', cloudinaryError);
       // Continue with database deletion even if Cloudinary deletion fails
     }
-
+    
     // Delete file record from database
     await prisma.file.delete({ where: { id: fileId } });
 
