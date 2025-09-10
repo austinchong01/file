@@ -1,6 +1,6 @@
 const express = require("express");
 const multer = require("multer");
-const path = require('path');
+const path = require("path");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const { PrismaClient } = require("@prisma/client");
 const { ensureAuthenticated } = require("../middleware/auth");
@@ -90,7 +90,10 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
           where: { id: folderId, userId: req.user.id },
         });
         if (!folder) {
-          return res.json({ success: false, message: "Invalid folder selected" });
+          return res.json({
+            success: false,
+            message: "Invalid folder selected",
+          });
         }
       }
 
@@ -127,21 +130,28 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         },
       });
 
-      // Return JSON with redirect info
-      const redirectUrl = folderId && folderId.trim() ? `/folders/${folderId}` : '/dashboard';
-      return res.json({ 
-        success: true, 
+      // Return to current folder or dashboard
+      const redirectUrl =
+        folderId && folderId.trim() ? `/folders/${folderId}` : "/dashboard";
+      return res.json({
+        success: true,
         message: "File uploaded successfully",
-        redirectUrl: redirectUrl
+        redirectUrl: redirectUrl,
       });
-
     } catch (error) {
       console.error("Upload error:", error);
-      return res.json({ success: false, message: "Error uploading file" });
+
+      const { parentId } = req.body;
+      const redirectUrl = parentId ? `/folders/${parentId}` : "/dashboard";
+
+      return res.json({
+        success: false,
+        message: "Error uploading folder",
+        redirectUrl: redirectUrl,
+      });
     }
   });
 });
-
 
 router.get("/:id/download", ensureAuthenticated, async (req, res) => {
   try {
@@ -150,18 +160,21 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
     });
 
     if (!file) {
-      return res.status(404).json({ success: false, message: 'File not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "File not found" });
     }
 
     let downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
       flags: "attachment",
       resource_type: file.cloudinaryResourceType,
     });
-    if (file.cloudinaryResourceType != "raw") downloadUrl += path.extname(file.originalName);
+    if (file.cloudinaryResourceType != "raw")
+      downloadUrl += path.extname(file.originalName);
 
     res.redirect(downloadUrl);
   } catch (error) {
-    return res.json({ success: false, message: error});
+    return res.json({ success: false, message: error });
   }
 });
 
@@ -189,12 +202,23 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
 
     await prisma.file.delete({ where: { id: req.params.id } });
 
-    let message = "File Deleted Successfully" + err;
-    return res.json({ success: true, message, redirectUrl: "/dashboard" });
+    // Determine redirect URL based on file's folder
+    const redirectUrl = file.folderId ? `/folders/${file.folderId}` : '/dashboard';
+    
+    return res.json({ 
+      success: true, 
+      message: "File deleted successfully" + err,
+      redirectUrl: redirectUrl
+    });
     
   } catch (error) {
-    message = 'Error deleting file' + error
-    return res.status(500).json({ success: false, message});
+    console.error("Delete File error:", error);
+    
+    return res.json({
+      success: false,
+      message: 'Error deleting file',
+      redirectUrl: '/dashboard' // Fallback to dashboard on error
+    });
   }
 });
 
