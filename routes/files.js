@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const path = require('path');
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const { PrismaClient } = require("@prisma/client");
 const { ensureAuthenticated } = require("../middleware/auth");
@@ -192,10 +193,12 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
     }
 
     // Generate a download URL with the original filename
-    const downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
+    let downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
       flags: "attachment",
-      resource_type: file.cloudinaryResourceType || "auto",
+      resource_type: file.cloudinaryResourceType,
     });
+
+    if (file.cloudinaryResourceType != "raw") downloadUrl += path.extname(file.originalName);
 
     res.redirect(downloadUrl);
   } catch (error) {
@@ -211,7 +214,6 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
       where: { id: req.params.id, userId: req.user.id },
       include: { folder: true },
     });
-    // console.log(file.cloudinaryResourceType);
 
     if (!file) {
       req.session.error_msg = "File not found";
@@ -228,8 +230,6 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
     }
 
     await prisma.file.delete({ where: { id: req.params.id } });
-
-    req.session.success_msg = "File deleted successfully";
 
     // Redirect to folder or dashboard
     if (file.folderId) {

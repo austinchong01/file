@@ -107,7 +107,6 @@
           <div class="card h-100">
             <div class="card-body text-center d-flex flex-column">
               <% 
-              // Determine which SVG icon to use based on file type
               let iconSrc = '/images/file.svg'; // default
               if (file.mimetype.startsWith('image/')) {
                 iconSrc = '/images/image.svg';
@@ -131,10 +130,10 @@
               </small>
               
               <div class="mt-auto">
-                <!-- <div class="btn-group w-100" role="group">
+                <div class="btn-group w-100" role="group">
                   <a href="/files/<%= file.id %>/download" class="btn btn-sm btn-success" title="Download" target="_blank">
                     <i class="fas fa-download"></i>
-                  </a> -->
+                  </a>
                   <form method="POST" action="/files/<%= file.id %>?_method=DELETE" class="flex-fill">
                     <button type="submit" class="btn btn-sm btn-danger w-100" 
                             onclick="return confirm('Delete this file?')" title="Delete">
