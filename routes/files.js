@@ -12,25 +12,16 @@ const prisma = new PrismaClient();
 const getResourceType = (mimetype) => {
   if (mimetype.startsWith("image/")) return "image";
   if (mimetype.startsWith("video/")) return "video";
-  if (
-    mimetype === "application/javascript" ||
-    mimetype === "text/javascript" ||
-    mimetype === "application/x-javascript"
-  )
-    return "javascript";
-  if (mimetype === "text/css") return "css";
-
-  if (
-    mimetype.includes("pdf") ||
-    mimetype.includes("document") ||
-    mimetype.includes("text") ||
-    mimetype.includes("word") ||
-    mimetype.includes("excel") ||
-    mimetype.includes("powerpoint") ||
-    mimetype === "application/zip" ||
-    mimetype === "application/x-zip-compressed"
-  )
-    return "raw";
+  // if (
+  //   mimetype.includes("pdf") ||
+  //   mimetype.includes("document") ||
+  //   mimetype.includes("text") ||
+  //   mimetype.includes("word") ||
+  //   mimetype.includes("excel") ||
+  //   mimetype.includes("powerpoint") ||
+  //   mimetype === "application/zip" ||
+  //   mimetype === "application/x-zip-compressed"
+  // )
   return "raw";
 };
 
@@ -51,15 +42,9 @@ const storage = new CloudinaryStorage({
         "gif",
         "webp",
         "pdf",
-        "doc",
-        "docx",
-        "txt",
-        "rtf",
         "mp4",
         "avi",
         "mov",
-        "mp3",
-        "wav",
       ],
     };
   },
@@ -81,15 +66,9 @@ const upload = multer({
       "image/gif",
       "image/webp",
       "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "text/plain",
       "video/mp4",
       "video/avi",
       "video/quicktime",
-      "audio/mp3",
-      "audio/mpeg",
-      "audio/wav",
     ];
 
     if (allowedTypes.includes(file.mimetype)) {
@@ -111,12 +90,6 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
           ? "File too large. Maximum size is 10MB."
           : err.message || "Error uploading file";
       req.session.error_msg = message;
-      return res.redirect("/dashboard");
-    }
-
-    if (!req.file) {
-      console.log("No file received");
-      req.session.error_msg = "Please select a file to upload";
       return res.redirect("/dashboard");
     }
 
