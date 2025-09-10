@@ -81,6 +81,7 @@ const upload = multer({
   },
 });
 
+// Update your upload route to always return JSON:
 router.post("/upload", ensureAuthenticated, (req, res) => {
   upload.single("file")(req, res, async (err) => {
     if (err) {
@@ -89,8 +90,7 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE"
           ? "File too large. Maximum size is 10MB."
           : err.message || "Error uploading file";
-      req.session.error_msg = message;
-      return res.redirect("/dashboard");
+      return res.json({ success: false, message });
     }
 
     try {
@@ -102,8 +102,7 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
           where: { id: folderId, userId: req.user.id },
         });
         if (!folder) {
-          req.session.error_msg = "Invalid folder selected";
-          return res.redirect("/files/upload");
+          return res.json({ success: false, message: "Invalid folder selected" });
         }
       }
 
@@ -140,19 +139,21 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         },
       });
 
-      // Redirect to folder or dashboard
-      if (folderId && folderId.trim()) {
-        res.redirect(`/folders/${folderId}`);
-      } else {
-        res.redirect("/dashboard");
-      }
+      // Return JSON with redirect info
+      const redirectUrl = folderId && folderId.trim() ? `/folders/${folderId}` : '/dashboard';
+      return res.json({ 
+        success: true, 
+        message: "File uploaded successfully",
+        redirectUrl: redirectUrl
+      });
+
     } catch (error) {
-      console.error("Upload file error:", error);
-      req.session.error_msg = "Error uploading file";
-      res.redirect("/files/upload");
+      console.error("Upload error:", error);
+      return res.json({ success: false, message: "Error uploading file" });
     }
   });
 });
+
 
 router.get("/:id/download", ensureAuthenticated, async (req, res) => {
   try {
@@ -161,23 +162,18 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
     });
 
     if (!file) {
-      req.session.error_msg = "File not found";
-      return res.redirect("/dashboard");
+      return res.status(404).json({ success: false, message: 'File not found' });
     }
 
-    // Generate a download URL with the original filename
     let downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
       flags: "attachment",
       resource_type: file.cloudinaryResourceType,
     });
-
     if (file.cloudinaryResourceType != "raw") downloadUrl += path.extname(file.originalName);
 
     res.redirect(downloadUrl);
   } catch (error) {
-    console.error("Download file error:", error);
-    req.session.error_msg = "Error downloading file";
-    res.redirect("/dashboard");
+    return res.json({ success: false, message: error});
   }
 });
 
@@ -189,10 +185,10 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
     });
 
     if (!file) {
-      req.session.error_msg = "File not found";
-      return res.redirect("/dashboard");
+      return res.status(404).json({ success: false, message: 'File not found' });
     }
 
+    let err = "";
     try {
       await cloudinary.uploader.destroy(file.cloudinaryPublicId, {
         resource_type: file.cloudinaryResourceType,
@@ -200,20 +196,17 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
     } catch (cloudinaryError) {
       console.error("Cloudinary deletion error:", cloudinaryError);
       // Continue with database deletion even if Cloudinary deletion fails
+      err = " (Cloudinary deletion error)"
     }
 
     await prisma.file.delete({ where: { id: req.params.id } });
 
-    // Redirect to folder or dashboard
-    if (file.folderId) {
-      res.redirect(`/folders/${file.folderId}`);
-    } else {
-      res.redirect("/dashboard");
-    }
+    let message = "File Deleted Successfully" + err;
+    return res.json({ success: true, message });
+    
   } catch (error) {
-    console.error("Delete file error:", error);
-    req.session.error_msg = "Error deleting file";
-    res.redirect("/dashboard");
+    message = 'Error deleting file' + error
+    return res.status(500).json({ success: false, message});
   }
 });
 

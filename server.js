@@ -31,20 +31,9 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Simple message system (optional replacement for flash)
+// Simple middleware to make user available in templates
 app.use((req, res, next) => {
   res.locals.user = req.user || null;
-  
-  // Get messages from session and clear them
-  res.locals.success_msg = req.session.success_msg || '';
-  res.locals.error_msg = req.session.error_msg || '';
-  res.locals.error = req.session.error || '';
-  
-  // Clear messages after setting them
-  delete req.session.success_msg;
-  delete req.session.error_msg;
-  delete req.session.error;
-  
   next();
 });
 
