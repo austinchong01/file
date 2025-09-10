@@ -170,6 +170,17 @@
                   </a>
                   <button
                     type="button"
+                    class="btn btn-sm btn-info"
+                    data-cloudinary-url="<%= file.cloudinaryUrl %>"
+                    data-mimetype="<%= file.mimetype %>"
+                    data-filename="<%= displayFileName %>"
+                    onclick="viewFileHandler(this)"
+                    title="View"
+                  >
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button
+                    type="button"
                     class="btn btn-sm btn-danger flex-fill"
                     data-file-id="<%= file.id %>"
                     data-file-name="<%= displayFileName %>"
@@ -284,7 +295,6 @@
                 <span class="badge bg-primary me-1">WEBP</span>
                 <span class="badge bg-danger me-1">PDF</span>
                 <span class="badge bg-success me-1">MP4</span>
-                <span class="badge bg-success me-1">AVI</span>
                 <span class="badge bg-success me-1">MOV</span>
               </div>
               <small class="text-muted d-block mt-1"
@@ -337,6 +347,24 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- File Preview Modal -->
+    <div class="modal fade" id="previewModal" tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="previewFileName">File Preview</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body text-center" id="previewContent">
+            <!-- Preview content will be loaded here -->
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -454,55 +482,114 @@
         deleteFile(fileId, fileName, button);
       }
 
-    function deleteFile(fileId, fileName, button) {
-      if (!confirm(`Are you sure you want to delete "${fileName}"?`)) {
-        return;
-      }
+      function deleteFile(fileId, fileName, button) {
+        if (!confirm(`Are you sure you want to delete "${fileName}"?`)) {
+          return;
+        }
 
-      // Show loading state
-      const originalHtml = button.innerHTML;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-      button.disabled = true;
+        // Show loading state
+        const originalHtml = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
 
-      fetch(`/files/${fileId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            showToast(data.message, "success");
-            
-            // Check if redirect URL is provided
-            if (data.redirectUrl) {
-              // Redirect after a short delay to show the toast
-              setTimeout(() => {
-                window.location.href = data.redirectUrl;
-              }, 1000);
+        fetch(`/files/${fileId}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              showToast(data.message, "success");
+              
+              // Check if redirect URL is provided
+              if (data.redirectUrl) {
+                // Redirect after a short delay to show the toast
+                setTimeout(() => {
+                  window.location.href = data.redirectUrl;
+                }, 1000);
+              } else {
+                // Original behavior - remove file card from page
+                setTimeout(() => {
+                  const fileCard = button.closest(".col-md-3");
+                  if (fileCard) {
+                    fileCard.remove();
+                  }
+                }, 500);
+              }
             } else {
-              // Original behavior - remove file card from page
-              setTimeout(() => {
-                const fileCard = button.closest(".col-md-3");
-                if (fileCard) {
-                  fileCard.remove();
-                }
-              }, 500);
+              showToast(data.message, "error");
+              button.innerHTML = originalHtml;
+              button.disabled = false;
             }
-          } else {
-            showToast(data.message, "error");
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showToast("Error deleting file", "error");
             button.innerHTML = originalHtml;
             button.disabled = false;
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          showToast("Error deleting file", "error");
-          button.innerHTML = originalHtml;
-          button.disabled = false;
-        });
-    }
+          });
+      }
+
+      function viewFileHandler(button) {
+        const cloudinaryUrl = button.getAttribute('data-cloudinary-url');
+        const mimetype = button.getAttribute('data-mimetype');
+        const fileName = button.getAttribute('data-filename');
+        showPreviewModal(cloudinaryUrl, mimetype, fileName);
+      }
+
+      function showPreviewModal(cloudinaryUrl, mimetype, fileName) {
+        const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        const previewContent = document.getElementById('previewContent');
+        const previewFileName = document.getElementById('previewFileName');
+        
+        // Set modal title
+        previewFileName.textContent = fileName;
+        
+        // Generate preview content based on file type
+        let content = '';
+        
+        if (mimetype.startsWith('image/')) {
+          content = `<img src="${cloudinaryUrl}" alt="${fileName}" class="img-fluid rounded shadow" style="max-height: 500px;">`;
+        } else if (mimetype.startsWith('video/')) {
+          content = `
+            <div class="mb-3">
+              <i class="fas fa-file-video fa-5x text-primary"></i>
+            </div>
+            <h5>${fileName}</h5>
+            <p class="text-muted">Video File</p>
+            <a href="${cloudinaryUrl}" target="_blank" class="btn btn-primary">
+              <i class="fas fa-external-link-alt"></i> Open in New Tab
+            </a>
+          `;
+        } else if (mimetype === 'application/pdf') {
+          content = `
+            <div class="mb-3">
+              <i class="fas fa-file-pdf fa-5x text-danger"></i>
+            </div>
+            <h5>${fileName}</h5>
+            <p class="text-muted">PDF Document</p>
+            <a href="${cloudinaryUrl}" target="_blank" class="btn btn-primary">
+              <i class="fas fa-external-link-alt"></i> Open in New Tab
+            </a>
+          `;
+        } else {
+          content = `
+            <div class="mb-3">
+              <i class="fas fa-file fa-5x text-secondary"></i>
+            </div>
+            <h5>${fileName}</h5>
+            <p class="text-muted">Preview not available for this file type</p>
+            <a href="${cloudinaryUrl}" target="_blank" class="btn btn-primary">
+              <i class="fas fa-external-link-alt"></i> Open in New Tab
+            </a>
+          `;
+        }
+        
+        previewContent.innerHTML = content;
+        modal.show();
+      }
     </script>
   </body>
 </html>
