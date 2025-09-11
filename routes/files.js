@@ -178,6 +178,49 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
   }
 });
 
+router.post("/rename", ensureAuthenticated, async (req, res) => {
+  try {
+    const { fileId, displayName } = req.body;
+
+    if (!fileId) {
+      return res.json({ success: false, message: "File ID is required" });
+    }
+
+    // Check if file exists and belongs to user
+    const file = await prisma.file.findFirst({
+      where: { id: fileId, userId: req.user.id },
+      include: { folder: true }
+    });
+
+    if (!file) {
+      return res.json({ success: false, message: "File not found" });
+    }
+
+    // Update the file display name
+    await prisma.file.update({
+      where: { id: fileId },
+      data: { displayName: displayName.trim() }
+    });
+
+    // Determine redirect URL - stay in current folder or dashboard
+    const redirectUrl = file.folderId ? `/folders/${file.folderId}` : "/dashboard";
+
+    return res.json({
+      success: true,
+      message: "File renamed successfully",
+      redirectUrl: redirectUrl
+    });
+  } catch (error) {
+    console.error("Rename file error:", error);
+    
+    return res.json({
+      success: false,
+      message: "Error renaming file",
+      redirectUrl: "/dashboard" // Fallback to dashboard on error
+    });
+  }
+});
+
 router.delete("/:id", ensureAuthenticated, async (req, res) => {
   try {
     const file = await prisma.file.findFirst({

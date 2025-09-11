@@ -287,3 +287,71 @@ function handleFolderRename(event) {
     submitButton.disabled = false;
   });
 }
+
+function openRenameFileModal(button) {
+  const fileId = button.getAttribute('data-file-id');
+  const fileName = button.getAttribute('data-file-name');
+  
+  // Set the file ID in the hidden input
+  document.getElementById('renameFileId').value = fileId;
+  
+  // Pre-fill the current file name
+  document.getElementById('newFileName').value = fileName;
+  
+  // Show the modal
+  const modal = new bootstrap.Modal(document.getElementById('renameFileModal'));
+  modal.show();
+  
+  // Focus and select the text in the input for easy editing
+  setTimeout(() => {
+    const input = document.getElementById('newFileName');
+    input.focus();
+    input.select();
+  }, 500);
+}
+
+function handleFileRename(event) {
+  event.preventDefault();
+  
+  const form = event.target;
+  const formData = new FormData(form);
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalHtml = submitButton.innerHTML;
+  
+  // Show loading state
+  submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renaming...';
+  submitButton.disabled = true;
+  
+  fetch(form.action, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(formData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showToast(data.message, 'success');
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('renameFileModal'));
+      modal.hide();
+      // Reset form
+      form.reset();
+      // Redirect after a short delay to show the toast
+      setTimeout(() => {
+        window.location.href = data.redirectUrl;
+      }, 1000);
+    } else {
+      showToast(data.message, 'error');
+      submitButton.innerHTML = originalHtml;
+      submitButton.disabled = false;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showToast('Error renaming file', 'error');
+    submitButton.innerHTML = originalHtml;
+    submitButton.disabled = false;
+  });
+}
