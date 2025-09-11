@@ -15,7 +15,8 @@ passport.use(new LocalStrategy(
       });
 
       if (!user) {
-        return done(null, false, { message: 'No user with that email' });
+        console.error("No user with that email")
+        return done(null, false, { message: "No user with that email"});
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
@@ -23,9 +24,11 @@ passport.use(new LocalStrategy(
       if (isMatch) {
         return done(null, user);
       } else {
+        console.error("Password incorrect")
         return done(null, false, { message: 'Password incorrect' });
       }
     } catch (error) {
+      console.error(error)
       return done(error);
     }
   }

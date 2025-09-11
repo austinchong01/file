@@ -37,19 +37,13 @@ app.use((req, res, next) => {
   next();
 });
 
+// Routes
+app.use('/', require('./routes/index'));
 app.use('/auth', require('./routes/auth'));
 app.use('/files', require('./routes/files'));
 app.use('/folders', require('./routes/folders'));
 
-app.get('/', (req, res) => {
-  res.redirect(req.isAuthenticated() ? '/dashboard' : '/auth/login');
-});
-
-app.get('/dashboard', (req, res) => {
-  if (!req.isAuthenticated()) return res.redirect('/auth/login');
-  require('./controllers/dashboardController').getDashboard(req, res);
-});
-
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Something broke!');
