@@ -51,7 +51,7 @@ model Folder {
 model File {
   id                      String   @id @default(cuid())
   originalName            String
-  displayName             String?  // NEW: Custom display name for the file
+  displayName             String?
   filename                String   // Cloudinary public_id
   mimetype                String
   size                    Int
