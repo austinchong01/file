@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 // API test endpoint
 router.get('/api/test', (req, res) => {
   res.json({ 
-    message: 'Backend connection successful!', 
+    message: 'Hello from the backend!', 
     timestamp: new Date().toISOString(),
     status: 'connected'
   });
