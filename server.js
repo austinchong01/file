@@ -12,31 +12,37 @@ const prisma = new PrismaClient();
 
 require('./config/passport');
 
+// CORS configuration - MUST be before other middleware
+app.use(
+  cors({
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  })
+);
+
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(methodOverride('_method'));
 
-// CORS configuration - moved before session
-app.use(
-  cors({
-    origin: [
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  })
-);
-
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 },
+  name: 'connect.sid', // Explicit session name
+  cookie: { 
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true, // Prevent XSS
+    sameSite: 'lax' // Allow cross-site requests
+  },
   store: new PrismaSessionStore(prisma, {
     checkPeriod: 2 * 60 * 1000,
-    dbRecordIdIsSessionId: true
+    dbRecordIdIsSessionId: true,
+    dbRecordIdFunction: undefined
   })
 }));
 

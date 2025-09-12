@@ -55,7 +55,7 @@ model File {
   mimetype                String
   size                    Int
   cloudinaryUrl           String   // Cloudinary URL
-  cloudinaryPublicId      String   // Cloudinary public_id (same as filename)
+  cloudinaryPublicId      String   // Cloudinary public_id
   cloudinaryResourceType  String?  // Store the resource type used in Cloudinary
   userId                  String
   folderId                String?

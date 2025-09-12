@@ -69,20 +69,30 @@ const upload = multer({
   },
 });
 
-// Update your upload route to always return JSON:
+// Update your upload route to handle API responses properly:
 router.post("/upload", ensureAuthenticated, (req, res) => {
+  console.log("Upload request received");
+  
   upload.single("file")(req, res, async (err) => {
     if (err) {
-      // console.error("Multer error:", err);
+      console.error("Multer error:", err);
       const message =
         err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE"
           ? "File too large. Maximum size is 10MB."
           : err.message || "Error uploading file";
-      return res.json({ success: false, message });
+      return res.status(400).json({ success: false, message });
     }
+
+    if (!req.file) {
+      console.error("No file received");
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    console.log("File received:", req.file);
 
     try {
       const { folderId, displayName } = req.body;
+      console.log("Request body:", req.body);
 
       // Validate folder ownership if folderId is provided
       if (folderId && folderId.trim()) {
@@ -90,7 +100,7 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
           where: { id: folderId, userId: req.user.id },
         });
         if (!folder) {
-          return res.json({
+          return res.status(400).json({
             success: false,
             message: "Invalid folder selected",
           });
@@ -114,7 +124,19 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         req.file.location;
       const resourceType = getResourceType(req.file.mimetype);
 
-      await prisma.file.create({
+      console.log("Creating file record:", {
+        originalName: req.file.originalname,
+        displayName: finalDisplayName,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        cloudinaryUrl: secureUrl,
+        cloudinaryPublicId: publicId,
+        cloudinaryResourceType: resourceType,
+        userId: req.user.id,
+        folderId: folderId && folderId.trim() ? folderId : null,
+      });
+
+      const fileRecord = await prisma.file.create({
         data: {
           originalName: req.file.originalname,
           displayName: finalDisplayName,
@@ -128,51 +150,61 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         },
       });
 
-      // Return to current folder or dashboard
-      const redirectUrl =
-        folderId && folderId.trim() ? `/folders/${folderId}` : "/dashboard";
+      console.log("File record created:", fileRecord);
+
       return res.json({
         success: true,
         message: "File uploaded successfully",
-        redirectUrl: redirectUrl,
+        file: fileRecord
       });
     } catch (error) {
       console.error("Upload error:", error);
 
-      const { parentId } = req.body;
-      const redirectUrl = parentId ? `/folders/${parentId}` : "/dashboard";
-
-      return res.json({
+      return res.status(500).json({
         success: false,
-        message: "Error uploading folder",
-        redirectUrl: redirectUrl,
+        message: "Error uploading file: " + error.message,
       });
     }
   });
 });
 
 router.get("/:id/download", ensureAuthenticated, async (req, res) => {
-  try {
+  try {    
     const file = await prisma.file.findFirst({
       where: { id: req.params.id, userId: req.user.id },
     });
 
     if (!file) {
+      console.log("File not found or user doesn't own it");
       return res
         .status(404)
         .json({ success: false, message: "File not found" });
     }
 
+    console.log("File found:", {
+      id: file.id,
+      originalName: file.originalName,
+      publicId: file.cloudinaryPublicId,
+      resourceType: file.cloudinaryResourceType,
+      mimetype: file.mimetype
+    });
+
     let downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
       flags: "attachment",
       resource_type: file.cloudinaryResourceType,
     });
-    if (file.cloudinaryResourceType != "raw")
+    
+    // Add file extension for non-raw files
+    if (file.cloudinaryResourceType !== "raw") {
       downloadUrl += path.extname(file.originalName);
+    }
+
+    console.log("Generated Cloudinary download URL:", downloadUrl);
 
     res.redirect(downloadUrl);
   } catch (error) {
-    return res.json({ success: false, message: error });
+    console.error("Download error:", error);
+    return res.status(500).json({ success: false, message: "Download failed" });
   }
 });
 
@@ -181,7 +213,7 @@ router.post("/rename", ensureAuthenticated, async (req, res) => {
     const { fileId, displayName } = req.body;
 
     if (!fileId) {
-      return res.json({ success: false, message: "File ID is required" });
+      return res.status(400).json({ success: false, message: "File ID is required" });
     }
 
     // Check if file exists and belongs to user
@@ -191,7 +223,7 @@ router.post("/rename", ensureAuthenticated, async (req, res) => {
     });
 
     if (!file) {
-      return res.json({ success: false, message: "File not found" });
+      return res.status(404).json({ success: false, message: "File not found" });
     }
 
     // Update the file display name
@@ -200,21 +232,16 @@ router.post("/rename", ensureAuthenticated, async (req, res) => {
       data: { displayName: displayName.trim() }
     });
 
-    // Determine redirect URL - stay in current folder or dashboard
-    const redirectUrl = file.folderId ? `/folders/${file.folderId}` : "/dashboard";
-
     return res.json({
       success: true,
-      message: "File renamed successfully",
-      redirectUrl: redirectUrl
+      message: "File renamed successfully"
     });
   } catch (error) {
     console.error("Rename file error:", error);
     
-    return res.json({
+    return res.status(500).json({
       success: false,
-      message: "Error renaming file",
-      redirectUrl: "/dashboard" // Fallback to dashboard on error
+      message: "Error renaming file"
     });
   }
 });
@@ -242,23 +269,18 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
     }
 
     await prisma.file.delete({ where: { id: req.params.id } });
-
-    // Determine redirect URL based on file's folder
-    const redirectUrl = file.folderId ? `/folders/${file.folderId}` : '/dashboard';
     
     return res.json({ 
       success: true, 
-      message: "File deleted successfully" + err,
-      redirectUrl: redirectUrl
+      message: "File deleted successfully" + err
     });
     
   } catch (error) {
     console.error("Delete File error:", error);
     
-    return res.json({
+    return res.status(500).json({
       success: false,
-      message: 'Error deleting file',
-      redirectUrl: '/dashboard' // Fallback to dashboard on error
+      message: 'Error deleting file'
     });
   }
 });

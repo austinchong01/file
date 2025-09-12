@@ -101,6 +101,11 @@ router.post('/login', (req, res, next) => {
 
 // Get current user info
 router.get('/me', (req, res) => {
+  console.log('Auth check - Session ID:', req.sessionID);
+  console.log('Auth check - Is authenticated:', req.isAuthenticated());
+  console.log('Auth check - User:', req.user);
+  console.log('Auth check - Session:', req.session);
+  
   if (req.isAuthenticated()) {
     res.json({
       success: true,

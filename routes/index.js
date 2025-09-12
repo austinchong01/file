@@ -51,11 +51,20 @@ router.get('/api/dashboard', ensureAuthenticated, async (req, res) => {
   }
 });
 
-// Serve React app for all non-API routes
+// Only serve React app for non-API routes in production
+// Remove the catch-all redirect in development
 router.get('*', (req, res) => {
-  // In development, proxy to Vite dev server
+  // Don't redirect API routes or file routes
+  if (req.path.startsWith('/api/') || 
+      req.path.startsWith('/auth/') || 
+      req.path.startsWith('/files/') || 
+      req.path.startsWith('/folders/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+
+  // In development, let React handle routing
   if (process.env.NODE_ENV === 'development') {
-    return res.redirect('http://localhost:5173' + req.path);
+    return res.status(404).send('Route not found - handle in React app');
   }
   
   // In production, serve built React app
