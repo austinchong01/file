@@ -1,43 +1,37 @@
+// server.js - Correct order:
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors'); // Add this import
+const cors = require('cors');
 const session = require('express-session');
 const { PrismaSessionStore } = require('@quixo3/prisma-session-store');
 const { PrismaClient } = require('@prisma/client');
 const passport = require('passport');
-const methodOverride = require('method-override');
 
 const app = express();
 const prisma = new PrismaClient();
 
-require('./config/passport');
+// 1. CORS FIRST
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
 
-// CORS configuration - MUST be before other middleware
-app.use(
-  cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  })
-);
-
-app.set('view engine', 'ejs');
-app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(methodOverride('_method'));
 
+// 3. SESSION CONFIGURATION
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  name: 'connect.sid', // Explicit session name
+  name: 'connect.sid',
   cookie: { 
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: false, // Set to true in production with HTTPS
-    httpOnly: true, // Prevent XSS
-    sameSite: 'lax' // Allow cross-site requests
+    maxAge: 24 * 60 * 60 * 1000,
+    secure: false,
+    httpOnly: true,
+    sameSite: 'lax'
   },
   store: new PrismaSessionStore(prisma, {
     checkPeriod: 2 * 60 * 1000,
@@ -46,14 +40,9 @@ app.use(session({
   })
 }));
 
+require('./config/passport');
 app.use(passport.initialize());
 app.use(passport.session());
-
-// Simple middleware to make user available in templates
-app.use((req, res, next) => {
-  res.locals.user = req.user || null;
-  next();
-});
 
 // Routes
 app.use('/', require('./routes/index'));
