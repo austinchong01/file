@@ -14,6 +14,15 @@ router.get('/', (req, res) => {
   }
 });
 
+// API test endpoint - NEW
+router.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Backend connection successful!', 
+    timestamp: new Date().toISOString(),
+    status: 'connected'
+  });
+});
+
 // Dashboard route - move the logic here
 router.get('/dashboard', ensureAuthenticated, async (req, res) => {
   try {
