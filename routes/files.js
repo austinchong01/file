@@ -105,7 +105,6 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
 
       const publicId =
         req.file.public_id ||
-        req.file.filename ||
         req.file.key ||
         `${Date.now()}_${req.file.originalname}`;
       const secureUrl =
@@ -119,7 +118,6 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         data: {
           originalName: req.file.originalname,
           displayName: finalDisplayName,
-          filename: publicId,
           mimetype: req.file.mimetype,
           size: req.file.size,
           cloudinaryUrl: secureUrl,

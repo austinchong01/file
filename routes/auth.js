@@ -40,6 +40,7 @@ router.post('/register', registerValidation, async (req, res) => {
 
     res.redirect('/auth/login');
   } catch (error) {
+    console.error("Registration Error:", error);
     res.redirect('/auth/register');
   }
 });

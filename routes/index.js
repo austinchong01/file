@@ -17,7 +17,6 @@ router.get('/', (req, res) => {
 // Dashboard route - move the logic here
 router.get('/dashboard', ensureAuthenticated, async (req, res) => {
   try {
-    console.log(req.user)
     const userId = req.user.id;
     
     const [folders, files] = await Promise.all([

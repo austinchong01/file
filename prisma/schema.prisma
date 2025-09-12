@@ -52,7 +52,6 @@ model File {
   id                      String   @id @default(cuid())
   originalName            String
   displayName             String?
-  filename                String   // Cloudinary public_id
   mimetype                String
   size                    Int
   cloudinaryUrl           String   // Cloudinary URL
