@@ -1,20 +1,12 @@
 const express = require('express');
+const path = require('path');
 const { ensureAuthenticated } = require('../middleware/auth');
 const { PrismaClient } = require('@prisma/client');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Home route - redirect to dashboard if authenticated, otherwise to login
-router.get('/', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.redirect('/dashboard');
-  } else {
-    res.redirect('/auth/login');
-  }
-});
-
-// API test endpoint - NEW
+// API test endpoint
 router.get('/api/test', (req, res) => {
   res.json({ 
     message: 'Backend connection successful!', 
@@ -23,8 +15,8 @@ router.get('/api/test', (req, res) => {
   });
 });
 
-// Dashboard route - move the logic here
-router.get('/dashboard', ensureAuthenticated, async (req, res) => {
+// API route to get dashboard data
+router.get('/api/dashboard', ensureAuthenticated, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -40,11 +32,34 @@ router.get('/dashboard', ensureAuthenticated, async (req, res) => {
       })
     ]);
 
-    res.render('dashboard', { title: 'Dashboard', folders, files });
+    res.json({ 
+      success: true, 
+      folders, 
+      files,
+      user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email
+      }
+    });
   } catch (error) {
     console.error('Dashboard error:', error);
-    res.render('dashboard', { title: 'Dashboard', folders: [], files: [] });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to load dashboard data' 
+    });
   }
+});
+
+// Serve React app for all non-API routes
+router.get('*', (req, res) => {
+  // In development, proxy to Vite dev server
+  if (process.env.NODE_ENV === 'development') {
+    return res.redirect('http://localhost:5173' + req.path);
+  }
+  
+  // In production, serve built React app
+  res.sendFile(path.join(__dirname, '../build/index.html'));
 });
 
 module.exports = router;

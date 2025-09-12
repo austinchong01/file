@@ -8,8 +8,8 @@ const { validationResult } = require('express-validator');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.get('/login', (req, res) => res.render('login', { title: 'Login' }));
-router.get('/register', (req, res) => res.render('register', { title: 'Register' }));
+// Remove the GET routes for login/register pages since React will handle them
+// Keep only API endpoints
 
 router.post('/register', registerValidation, async (req, res) => {
   const { name, email, password } = req.body;
@@ -18,19 +18,24 @@ router.post('/register', registerValidation, async (req, res) => {
   let errors = err.array().map(error => ({ msg: error.msg }));
 
   if (errors.length > 0) {
-    return res.render('register', { errors, name, email, title: 'Register' });
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Validation failed', 
+      errors: errors 
+    });
   }
-
 
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     
     if (existingUser) {
-      errors.push({ msg: 'Email already exists' });
-      return res.render('register', { errors, name, email, title: 'Register' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email already exists' 
+      });
     }
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         name,
         email,
@@ -38,22 +43,93 @@ router.post('/register', registerValidation, async (req, res) => {
       }
     });
 
-    res.redirect('/auth/login');
+    // Return success response instead of redirect
+    res.json({ 
+      success: true, 
+      message: 'Registration successful',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      }
+    });
   } catch (error) {
     console.error("Registration Error:", error);
-    res.redirect('/auth/register');
+    res.status(500).json({ 
+      success: false, 
+      message: 'Registration failed' 
+    });
   }
 });
 
-router.post('/login', passport.authenticate('local', {
-  successRedirect: '/dashboard',
-  failureRedirect: '/auth/login'
-}));
+router.post('/login', (req, res, next) => {
+  passport.authenticate('local', (err, user, info) => {
+    if (err) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Authentication error' 
+      });
+    }
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: info.message || 'Invalid credentials' 
+      });
+    }
+    
+    req.logIn(user, (err) => {
+      if (err) {
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Login failed' 
+        });
+      }
+      
+      return res.json({ 
+        success: true, 
+        message: 'Login successful',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email
+        }
+      });
+    });
+  })(req, res, next);
+});
 
-router.get('/logout', (req, res) => {
+// Get current user info
+router.get('/me', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({
+      success: true,
+      user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email
+      }
+    });
+  } else {
+    res.status(401).json({
+      success: false,
+      message: 'Not authenticated'
+    });
+  }
+});
+
+router.post('/logout', (req, res) => {
   req.logout(err => {
-    if (err) return next(err);
-    res.redirect('/auth/login');
+    if (err) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Logout failed' 
+      });
+    }
+    res.json({ 
+      success: true, 
+      message: 'Logged out successfully' 
+    });
   });
 });
 
