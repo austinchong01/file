@@ -72,7 +72,7 @@ const upload = multer({
 // Update your upload route to handle API responses properly:
 router.post("/upload", ensureAuthenticated, (req, res) => {
   console.log("Upload request received");
-  
+
   upload.single("file")(req, res, async (err) => {
     if (err) {
       console.error("Multer error:", err);
@@ -85,14 +85,13 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
 
     if (!req.file) {
       console.error("No file received");
-      return res.status(400).json({ success: false, message: "No file uploaded" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No file uploaded" });
     }
-
-    console.log("File received:", req.file);
 
     try {
       const { folderId, displayName } = req.body;
-      console.log("Request body:", req.body);
 
       // Validate folder ownership if folderId is provided
       if (folderId && folderId.trim()) {
@@ -113,28 +112,15 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
           ? displayName.trim()
           : req.file.originalname;
 
-      const publicId =
-        req.file.public_id ||
-        req.file.key ||
-        `${Date.now()}_${req.file.originalname}`;
+      // Instead of just req.file.public_id, store the full path
+      const publicId = req.file.filename;
+
       const secureUrl =
         req.file.secure_url ||
         req.file.url ||
         req.file.path ||
         req.file.location;
       const resourceType = getResourceType(req.file.mimetype);
-
-      console.log("Creating file record:", {
-        originalName: req.file.originalname,
-        displayName: finalDisplayName,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        cloudinaryUrl: secureUrl,
-        cloudinaryPublicId: publicId,
-        cloudinaryResourceType: resourceType,
-        userId: req.user.id,
-        folderId: folderId && folderId.trim() ? folderId : null,
-      });
 
       const fileRecord = await prisma.file.create({
         data: {
@@ -150,12 +136,10 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
         },
       });
 
-      console.log("File record created:", fileRecord);
-
       return res.json({
         success: true,
         message: "File uploaded successfully",
-        file: fileRecord
+        file: fileRecord,
       });
     } catch (error) {
       console.error("Upload error:", error);
@@ -169,7 +153,7 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
 });
 
 router.get("/:id/download", ensureAuthenticated, async (req, res) => {
-  try {    
+  try {
     const file = await prisma.file.findFirst({
       where: { id: req.params.id, userId: req.user.id },
     });
@@ -181,27 +165,18 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
         .json({ success: false, message: "File not found" });
     }
 
-    console.log("File found:", {
-      id: file.id,
-      originalName: file.originalName,
-      publicId: file.cloudinaryPublicId,
-      resourceType: file.cloudinaryResourceType,
-      mimetype: file.mimetype,
-      folder: file.folder
-    });
+    let downloadUrl = cloudinary.url(
+      `${file.cloudinaryPublicId}`,
+      {
+        flags: "attachment",
+        resource_type: file.cloudinaryResourceType,
+      }
+    );
 
-    let downloadUrl = cloudinary.url(`file-uploader-test/${file.cloudinaryPublicId}`, {
-      flags: "attachment",
-      resource_type: file.cloudinaryResourceType,
-      version: null  // This removes the version number
-    });
-    
     // Add file extension for non-raw files
     if (file.cloudinaryResourceType !== "raw") {
       downloadUrl += path.extname(file.originalName);
     }
-
-    console.log("Generated Cloudinary download URL:", downloadUrl);
 
     res.redirect(downloadUrl);
   } catch (error) {
@@ -215,35 +190,39 @@ router.post("/rename", ensureAuthenticated, async (req, res) => {
     const { fileId, displayName } = req.body;
 
     if (!fileId) {
-      return res.status(400).json({ success: false, message: "File ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "File ID is required" });
     }
 
     // Check if file exists and belongs to user
     const file = await prisma.file.findFirst({
       where: { id: fileId, userId: req.user.id },
-      include: { folder: true }
+      include: { folder: true },
     });
 
     if (!file) {
-      return res.status(404).json({ success: false, message: "File not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "File not found" });
     }
 
     // Update the file display name
     await prisma.file.update({
       where: { id: fileId },
-      data: { displayName: displayName.trim() }
+      data: { displayName: displayName.trim() },
     });
 
     return res.json({
       success: true,
-      message: "File renamed successfully"
+      message: "File renamed successfully",
     });
   } catch (error) {
     console.error("Rename file error:", error);
-    
+
     return res.status(500).json({
       success: false,
-      message: "Error renaming file"
+      message: "Error renaming file",
     });
   }
 });
@@ -256,7 +235,9 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
     });
 
     if (!file) {
-      return res.status(404).json({ success: false, message: 'File not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "File not found" });
     }
 
     let err = "";
@@ -267,22 +248,21 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
     } catch (cloudinaryError) {
       console.error("Cloudinary deletion error:", cloudinaryError);
       // Continue with database deletion even if Cloudinary deletion fails
-      err = " (Cloudinary deletion error)"
+      err = " (Cloudinary deletion error)";
     }
 
     await prisma.file.delete({ where: { id: req.params.id } });
-    
-    return res.json({ 
-      success: true, 
-      message: "File deleted successfully" + err
+
+    return res.json({
+      success: true,
+      message: "File deleted successfully" + err,
     });
-    
   } catch (error) {
     console.error("Delete File error:", error);
-    
+
     return res.status(500).json({
       success: false,
-      message: 'Error deleting file'
+      message: "Error deleting file",
     });
   }
 });
