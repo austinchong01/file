@@ -8,20 +8,20 @@ const { validationResult } = require('express-validator');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Remove the GET routes for login/register pages since React will handle them
-// Keep only API endpoints
 
 router.post('/register', registerValidation, async (req, res) => {
   const { name, email, password } = req.body;
 
+
   let err = validationResult(req);
-  let errors = err.array().map(error => ({ msg: error.msg }));
+  let errors = err.array().map(error => (error.msg));
+  console.log(errors)
 
   if (errors.length > 0) {
     return res.status(400).json({ 
       success: false, 
       message: 'Validation failed', 
-      errors: errors 
+      errors: errors
     });
   }
 
@@ -31,7 +31,7 @@ router.post('/register', registerValidation, async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Email already exists' 
+        message: 'Email already exists',
       });
     }
 
@@ -99,39 +99,39 @@ router.post('/login', (req, res, next) => {
   })(req, res, next);
 });
 
-// Get current user info
-router.get('/me', (req, res) => {
+// // Get current user info
+// router.get('/me', (req, res) => {
   
-  if (req.isAuthenticated()) {
-    res.json({
-      success: true,
-      user: {
-        id: req.user.id,
-        name: req.user.name,
-        email: req.user.email
-      }
-    });
-  } else {
-    res.status(401).json({
-      success: false,
-      message: 'Not authenticated'
-    });
-  }
-});
+//   if (req.isAuthenticated()) {
+//     res.json({
+//       success: true,
+//       user: {
+//         id: req.user.id,
+//         name: req.user.name,
+//         email: req.user.email
+//       }
+//     });
+//   } else {
+//     res.status(401).json({
+//       success: false,
+//       message: 'Not authenticated'
+//     });
+//   }
+// });
 
-router.post('/logout', (req, res) => {
-  req.logout(err => {
-    if (err) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Logout failed' 
-      });
-    }
-    res.json({ 
-      success: true, 
-      message: 'Logged out successfully' 
-    });
-  });
-});
+// router.post('/logout', (req, res) => {
+//   req.logout(err => {
+//     if (err) {
+//       return res.status(500).json({ 
+//         success: false, 
+//         message: 'Logout failed' 
+//       });
+//     }
+//     res.json({ 
+//       success: true, 
+//       message: 'Logged out successfully' 
+//     });
+//   });
+// });
 
 module.exports = router;
