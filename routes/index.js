@@ -16,40 +16,40 @@ router.get('/test', (req, res) => {
 });
 
 // API route to get dashboard data
-// router.get('/api/dashboard', ensureAuthenticated, async (req, res) => {
-//   try {
-//     const userId = req.user.id;
+router.get('/dashboard', ensureAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user.id;
     
-//     const [folders, files] = await Promise.all([
-//       prisma.folder.findMany({
-//         where: { userId, parentId: null },
-//         orderBy: { name: 'asc' }
-//       }),
-//       prisma.file.findMany({
-//         where: { userId, folderId: null },
-//         orderBy: { createdAt: 'desc' },
-//         include: { folder: true }
-//       })
-//     ]);
+    const [folders, files] = await Promise.all([
+      prisma.folder.findMany({
+        where: { userId, parentId: null },
+        orderBy: { name: 'asc' }
+      }),
+      prisma.file.findMany({
+        where: { userId, folderId: null },
+        orderBy: { createdAt: 'desc' },
+        include: { folder: true }
+      })
+    ]);
 
-//     res.json({ 
-//       success: true, 
-//       folders, 
-//       files,
-//       user: {
-//         id: req.user.id,
-//         name: req.user.name,
-//         email: req.user.email
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Dashboard error:', error);
-//     res.status(500).json({ 
-//       success: false, 
-//       message: 'Failed to load dashboard data' 
-//     });
-//   }
-// });
+    res.json({ 
+      success: true, 
+      folders, 
+      files,
+      user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email
+      }
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to load dashboard data' 
+    });
+  }
+});
 
 // // Only serve React app for non-API routes in production
 // // Remove the catch-all redirect in development

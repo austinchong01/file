@@ -186,12 +186,14 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
       originalName: file.originalName,
       publicId: file.cloudinaryPublicId,
       resourceType: file.cloudinaryResourceType,
-      mimetype: file.mimetype
+      mimetype: file.mimetype,
+      folder: file.folder
     });
 
-    let downloadUrl = cloudinary.url(file.cloudinaryPublicId, {
+    let downloadUrl = cloudinary.url(`file-uploader-test/${file.cloudinaryPublicId}`, {
       flags: "attachment",
       resource_type: file.cloudinaryResourceType,
+      version: null  // This removes the version number
     });
     
     // Add file extension for non-raw files
