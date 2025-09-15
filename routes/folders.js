@@ -55,13 +55,13 @@ router.get("/:id", ensureAuthenticated, async (req, res) => {
       return res.json({
         success: false,
         message: "Folder not found",
-        redirectUrl: "/dashboard",
       });
     }
 
-    res.render("folder-view", {
-      title: `Folder: ${folder.name}`,
-      folder,
+    // Return JSON data instead of rendering a view
+    return res.json({
+      success: true,
+      folder: folder,
       folders: folder.children,
       files: folder.files,
     });
@@ -70,7 +70,6 @@ router.get("/:id", ensureAuthenticated, async (req, res) => {
     return res.json({
       success: false,
       message: "Error loading folder",
-      redirectUrl: "/dashboard",
     });
   }
 });
