@@ -65,6 +65,16 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use((req, res, next) => {
+  console.log(`\n=== INCOMING REQUEST ===`);
+  console.log(`${req.method} ${req.url}`);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Body:', req.body);
+  console.log('Cookies:', req.cookies);
+  console.log('========================\n');
+  next();
+});
+
 // Routes
 app.use('/', require('./routes/index'));
 app.use('/auth', require('./routes/auth'));

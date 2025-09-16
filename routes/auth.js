@@ -79,7 +79,16 @@ router.post('/register', redirectIfAuthenticated, registerValidation, async (req
 });
 
 router.post('/login', redirectIfAuthenticated, (req, res, next) => {
+  console.log('=== LOGIN ATTEMPT ===');
+  console.log('Request body:', req.body);
+  console.log('Request headers:', req.headers);
+  
   passport.authenticate('local', (err, user, info) => {
+    console.log('Passport authenticate callback:');
+    console.log('- Error:', err);
+    console.log('- User:', user ? { id: user.id, email: user.email, name: user.name } : null);
+    console.log('- Info:', info);
+    
     if (err) {
       console.error('Passport error:', err);
       return res.status(500).json({ 
@@ -96,32 +105,36 @@ router.post('/login', redirectIfAuthenticated, (req, res, next) => {
       });
     }
     
-    // Generate JWT token instead of creating session
-    // const token = generateToken(user);
-        
+    // Generate JWT token
+    console.log('Generating JWT token for user:', user.id);
+    const token = generateToken(user);
+    console.log('Generated token (first 50 chars):', token.substring(0, 50) + '...');
+    
     // Option 1: Send token in response body (for localStorage)
-    // return res.json({ 
-    //   success: true, 
-    //   message: 'Login successful',
-    //   token: token,
-    //   user: {
-    //     id: user.id,
-    //     name: user.name,
-    //     email: user.email
-    //   }
-    // });
-
-    // Option 2: Set token as httpOnly cookie (uncomment if preferred)
-    setTokenCookie(res, user);
+    console.log('Sending token in response body');
     return res.json({ 
       success: true, 
       message: 'Login successful',
+      token: token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email
       }
     });
+
+    // Option 2: Set token as httpOnly cookie (currently commented out)
+    // setTokenCookie(res, user);
+    // console.log('Set token as httpOnly cookie');
+    // return res.json({ 
+    //   success: true, 
+    //   message: 'Login successful',
+    //   user: {
+    //     id: user.id,
+    //     name: user.name,
+    //     email: user.email
+    //   }
+    // });
 
   })(req, res, next);
 });
