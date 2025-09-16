@@ -2,37 +2,25 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const session = require('express-session');
-const { PrismaSessionStore } = require('@quixo3/prisma-session-store');
 const { PrismaClient } = require('@prisma/client');
 const passport = require('passport');
 
 const app = express();
 const prisma = new PrismaClient();
 
-// Determine if we're in production
 const isProduction = process.env.NODE_ENV === 'production';
-
-// Configure CORS origins
 const corsOrigins = isProduction 
   ? [process.env.FRONTEND_URL] 
   : [
       process.env.FRONTEND_URL,
       'http://localhost:5173', 
       'http://localhost:3000',
-      'http://localhost:4173' // Vite preview
+      'http://localhost:4173'
     ];
-
-// Remove any undefined origins
 const allowedOrigins = corsOrigins.filter(origin => origin);
 
-console.log('CORS Origins:', allowedOrigins);
-console.log('Production mode:', isProduction);
-
-// 1. CORS CONFIGURATION
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
@@ -46,7 +34,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 
-    'Authorization', 
+    'Authorization',
     'X-Requested-With',
     'Accept',
     'Origin',
@@ -64,30 +52,9 @@ app.options('*', cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// 3. SESSION CONFIGURATION
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  name: 'connect.sid',
-  cookie: { 
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: isProduction, // Use secure cookies in production
-    httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
-    domain: isProduction ? undefined : undefined // Let browser handle domain
-  },
-  store: new PrismaSessionStore(prisma, {
-    checkPeriod: 2 * 60 * 1000,
-    dbRecordIdIsSessionId: true,
-    dbRecordIdFunction: undefined
-  })
-}));
-
 // Initialize Passport
 require('./config/passport');
 app.use(passport.initialize());
-app.use(passport.session());
 
 // Health check endpoint
 app.get('/health', (req, res) => {

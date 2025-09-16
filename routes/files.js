@@ -3,7 +3,7 @@ const multer = require("multer");
 const path = require("path");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const { PrismaClient } = require("@prisma/client");
-const { ensureAuthenticated } = require("../middleware/auth");
+const { authenticateJWT } = require("../middleware/jwtAuth"); // Updated import
 const cloudinary = require("../config/cloudinary");
 
 const router = express.Router();
@@ -69,8 +69,8 @@ const upload = multer({
   },
 });
 
-// Update your upload route to handle API responses properly:
-router.post("/upload", ensureAuthenticated, (req, res) => {
+// Updated to use JWT authentication
+router.post("/upload", authenticateJWT, (req, res) => {
   console.log("Upload request received");
 
   upload.single("file")(req, res, async (err) => {
@@ -131,7 +131,7 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
           cloudinaryUrl: secureUrl,
           cloudinaryPublicId: publicId,
           cloudinaryResourceType: resourceType,
-          userId: req.user.id,
+          userId: req.user.id, // Using req.user from JWT middleware
           folderId: folderId && folderId.trim() ? folderId : null,
         },
       });
@@ -152,10 +152,10 @@ router.post("/upload", ensureAuthenticated, (req, res) => {
   });
 });
 
-router.get("/:id/download", ensureAuthenticated, async (req, res) => {
+router.get("/:id/download", authenticateJWT, async (req, res) => {
   try {
     const file = await prisma.file.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id: req.params.id, userId: req.user.id }, // Using req.user from JWT
     });
 
     if (!file) {
@@ -185,7 +185,7 @@ router.get("/:id/download", ensureAuthenticated, async (req, res) => {
   }
 });
 
-router.post("/rename", ensureAuthenticated, async (req, res) => {
+router.post("/rename", authenticateJWT, async (req, res) => {
   try {
     const { fileId, displayName } = req.body;
 
@@ -197,7 +197,7 @@ router.post("/rename", ensureAuthenticated, async (req, res) => {
 
     // Check if file exists and belongs to user
     const file = await prisma.file.findFirst({
-      where: { id: fileId, userId: req.user.id },
+      where: { id: fileId, userId: req.user.id }, // Using req.user from JWT
       include: { folder: true },
     });
 
@@ -227,10 +227,10 @@ router.post("/rename", ensureAuthenticated, async (req, res) => {
   }
 });
 
-router.delete("/:id", ensureAuthenticated, async (req, res) => {
+router.delete("/:id", authenticateJWT, async (req, res) => {
   try {
     const file = await prisma.file.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id: req.params.id, userId: req.user.id }, // Using req.user from JWT
       include: { folder: true },
     });
 

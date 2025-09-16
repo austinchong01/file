@@ -1,19 +1,19 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
-const { ensureAuthenticated } = require("../middleware/auth");
+const { authenticateJWT } = require("../middleware/jwtAuth"); // Updated import
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Create folder
-router.post("/create", ensureAuthenticated, async (req, res) => {
+// Create folder - Updated to use JWT auth
+router.post("/create", authenticateJWT, async (req, res) => {
   try {
     const { name, parentId } = req.body;
 
     await prisma.folder.create({
       data: {
         name,
-        userId: req.user.id,
+        userId: req.user.id, // Using req.user from JWT middleware
         parentId: parentId || null,
       },
     });
@@ -39,11 +39,11 @@ router.post("/create", ensureAuthenticated, async (req, res) => {
   }
 });
 
-// View folder contents
-router.get("/:id", ensureAuthenticated, async (req, res) => {
+// View folder contents - Updated to use JWT auth
+router.get("/:id", authenticateJWT, async (req, res) => {
   try {
     const folder = await prisma.folder.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id: req.params.id, userId: req.user.id }, // Using req.user from JWT
       include: {
         children: { orderBy: { name: "asc" } },
         files: { orderBy: { createdAt: "desc" } },
@@ -74,7 +74,8 @@ router.get("/:id", ensureAuthenticated, async (req, res) => {
   }
 });
 
-router.post("/rename", ensureAuthenticated, async (req, res) => {
+// Rename folder - Updated to use JWT auth
+router.post("/rename", authenticateJWT, async (req, res) => {
   try {
     const { folderId, name } = req.body;
 
@@ -84,7 +85,7 @@ router.post("/rename", ensureAuthenticated, async (req, res) => {
 
     // Check if folder exists and belongs to user
     const folder = await prisma.folder.findFirst({
-      where: { id: folderId, userId: req.user.id },
+      where: { id: folderId, userId: req.user.id }, // Using req.user from JWT
       include: { parent: true },
     });
 
@@ -122,10 +123,11 @@ router.post("/rename", ensureAuthenticated, async (req, res) => {
   }
 });
 
-router.delete("/:id", ensureAuthenticated, async (req, res) => {
+// Delete folder - Updated to use JWT auth
+router.delete("/:id", authenticateJWT, async (req, res) => {
   try {
     const folder = await prisma.folder.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id: req.params.id, userId: req.user.id }, // Using req.user from JWT
       include: { children: true, files: true, parent: true },
     });
 
@@ -157,14 +159,14 @@ router.delete("/:id", ensureAuthenticated, async (req, res) => {
       redirectUrl: redirectUrl,
     });
   } catch (error) {
-    console.error("Rename folder error:", error);
+    console.error("Delete folder error:", error);
 
     const { parentId } = req.body;
     const redirectUrl = parentId ? `/folders/${parentId}` : "/dashboard";
 
     return res.json({
       success: false,
-      message: "Error renaming folder",
+      message: "Error deleting folder",
       redirectUrl: redirectUrl,
     });
   }

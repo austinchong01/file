@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { ensureAuthenticated } = require('../middleware/auth');
+const { authenticateJWT } = require('../middleware/jwtAuth'); // Updated import
 const { PrismaClient } = require('@prisma/client');
 
 const router = express.Router();
@@ -15,10 +15,10 @@ router.get('/test', (req, res) => {
   });
 });
 
-// API route to get dashboard data
-router.get('/dashboard', ensureAuthenticated, async (req, res) => {
+// API route to get dashboard data - Updated to use JWT auth
+router.get('/dashboard', authenticateJWT, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.id; // Using req.user from JWT middleware
     
     const [folders, files] = await Promise.all([
       prisma.folder.findMany({
