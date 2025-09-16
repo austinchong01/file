@@ -6,16 +6,13 @@ const prisma = new PrismaClient();
 
 // JWT Authentication middleware for API routes
 exports.authenticateJWT = async (req, res, next) => {
-  try {
-    console.log('=== JWT Authentication Check ===');
-    
+  try {    
     let token = null;
 
     // Try to get token from Authorization header first
     const authHeader = req.headers.authorization;
     if (authHeader) {
       token = extractTokenFromHeader(authHeader);
-      console.log('Token from Authorization header:', token ? 'Found' : 'Not found');
     }
 
     // Fallback: try to get token from httpOnly cookie
@@ -35,7 +32,6 @@ exports.authenticateJWT = async (req, res, next) => {
 
     // Verify the token
     const decoded = verifyToken(token);
-    console.log('Token decoded successfully:', decoded.id, decoded.email);
 
     // Optional: Verify user still exists in database
     const user = await prisma.user.findUnique({
@@ -54,8 +50,6 @@ exports.authenticateJWT = async (req, res, next) => {
 
     // Add user to request object
     req.user = user;
-    console.log('Authentication successful for user:', user.email);
-    console.log('=== End JWT Auth Check ===');
     
     next();
 

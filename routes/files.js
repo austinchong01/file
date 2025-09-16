@@ -46,8 +46,6 @@ const upload = multer({
     files: 1,
   },
   fileFilter: (req, file, cb) => {
-    console.log("FileFilter - File mimetype:", file.mimetype);
-
     const allowedTypes = [
       "image/jpeg",
       "image/jpg",
@@ -71,8 +69,6 @@ const upload = multer({
 
 // Updated to use JWT authentication
 router.post("/upload", authenticateJWT, (req, res) => {
-  console.log("Upload request received");
-
   upload.single("file")(req, res, async (err) => {
     if (err) {
       console.error("Multer error:", err);

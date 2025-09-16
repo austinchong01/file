@@ -15,7 +15,6 @@ router.post('/register', redirectIfAuthenticated, registerValidation, async (req
 
   let err = validationResult(req);
   let errors = err.array().map(error => (error.msg));
-  console.log(errors);
 
   if (errors.length > 0) {
     return res.status(400).json({ 
@@ -80,9 +79,6 @@ router.post('/register', redirectIfAuthenticated, registerValidation, async (req
 });
 
 router.post('/login', redirectIfAuthenticated, (req, res, next) => {
-  console.log('=== Login Attempt ===');
-  console.log('Request body:', req.body);
-  
   passport.authenticate('local', (err, user, info) => {
     if (err) {
       console.error('Passport error:', err);
@@ -100,31 +96,14 @@ router.post('/login', redirectIfAuthenticated, (req, res, next) => {
       });
     }
     
-    console.log('=== Login Success ===');
-    console.log('User authenticated:', user.email);
-    
     // Generate JWT token instead of creating session
-    const token = generateToken(user);
-    
-    console.log('JWT token generated for user:', user.id);
-    
+    // const token = generateToken(user);
+        
     // Option 1: Send token in response body (for localStorage)
-    return res.json({ 
-      success: true, 
-      message: 'Login successful',
-      token: token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email
-      }
-    });
-
-    // Option 2: Set token as httpOnly cookie (uncomment if preferred)
-    // setTokenCookie(res, user);
     // return res.json({ 
     //   success: true, 
     //   message: 'Login successful',
+    //   token: token,
     //   user: {
     //     id: user.id,
     //     name: user.name,
@@ -132,11 +111,22 @@ router.post('/login', redirectIfAuthenticated, (req, res, next) => {
     //   }
     // });
 
+    // Option 2: Set token as httpOnly cookie (uncomment if preferred)
+    setTokenCookie(res, user);
+    return res.json({ 
+      success: true, 
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      }
+    });
+
   })(req, res, next);
 });
 
 router.post('/logout', (req, res) => {
-  console.log('Logout request received');
   
   // Clear httpOnly cookie if you're using that approach
   clearTokenCookie(res);
