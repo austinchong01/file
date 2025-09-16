@@ -6,27 +6,27 @@ const prisma = new PrismaClient();
 
 // JWT Authentication middleware for API routes
 exports.authenticateJWT = async (req, res, next) => {
-  console.log('=== JWT AUTHENTICATION MIDDLEWARE ===');
-  console.log('Request URL:', req.url);
-  console.log('Request method:', req.method);
+  // console.log('=== JWT AUTHENTICATION MIDDLEWARE ===');
+  // console.log('Request URL:', req.url);
+  // console.log('Request method:', req.method);
   
   try {    
     let token = null;
 
     // Try to get token from Authorization header first
     const authHeader = req.headers.authorization;
-    console.log('Authorization header:', authHeader);
+    // console.log('Authorization header:', authHeader);
     
     if (authHeader) {
       token = extractTokenFromHeader(authHeader);
-      console.log('Token from header:', token ? 'Found' : 'Not found');
+      // console.log('Token from header:', token ? 'Found' : 'Not found');
     }
 
     // Fallback: try to get token from httpOnly cookie
     if (!token && req.cookies && req.cookies.jwt) {
       token = req.cookies.jwt;
-      console.log('Token from cookie:', token ? 'Found' : 'Not found');
-      console.log('Cookie token (first 50 chars):', token ? token.substring(0, 50) + '...' : 'N/A');
+      // console.log('Token from cookie:', token ? 'Found' : 'Not found');
+      // console.log('Cookie token (first 50 chars):', token ? token.substring(0, 50) + '...' : 'N/A');
     }
 
     if (!token) {
@@ -38,14 +38,14 @@ exports.authenticateJWT = async (req, res, next) => {
       });
     }
 
-    console.log('Token found, proceeding to verify...');
+    // console.log('Token found, proceeding to verify...');
     
     // Verify the token
     const decoded = verifyToken(token);
-    console.log('Token verification result:', decoded);
+    // console.log('Token verification result:', decoded);
 
     // Optional: Verify user still exists in database
-    console.log('Looking up user in database:', decoded.id);
+    // console.log('Looking up user in database:', decoded.id);
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: { id: true, email: true, name: true }
@@ -60,20 +60,20 @@ exports.authenticateJWT = async (req, res, next) => {
       });
     }
 
-    console.log('✅ User found in database:', user);
-    console.log('✅ JWT Authentication successful');
+    // console.log('✅ User found in database:', user);
+    // console.log('✅ JWT Authentication successful');
     
     // Add user to request object
     req.user = user;
-    console.log('Added user to req.user:', req.user);
-    console.log('=== END JWT AUTHENTICATION (SUCCESS) ===');
+    // console.log('Added user to req.user:', req.user);
+    // console.log('=== END JWT AUTHENTICATION (SUCCESS) ===');
     
     next();
 
   } catch (error) {
     console.error('❌ JWT Authentication error:', error.message);
-    console.log('Error stack:', error.stack);
-    console.log('=== END JWT AUTHENTICATION (ERROR) ===');
+    // console.log('Error stack:', error.stack);
+    // console.log('=== END JWT AUTHENTICATION (ERROR) ===');
     
     return res.status(401).json({
       success: false,

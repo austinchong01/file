@@ -6,11 +6,11 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // Generate JWT token
 const generateToken = (user) => {
-  console.log('=== GENERATING JWT TOKEN ===');
-  console.log('JWT_SECRET exists:', !!JWT_SECRET);
-  console.log('JWT_SECRET (first 10 chars):', JWT_SECRET.substring(0, 10) + '...');
-  console.log('JWT_EXPIRES_IN:', JWT_EXPIRES_IN);
-  console.log('User data for token:', { id: user.id, email: user.email, name: user.name });
+  // console.log('=== GENERATING JWT TOKEN ===');
+  // console.log('JWT_SECRET exists:', !!JWT_SECRET);
+  // console.log('JWT_SECRET (first 10 chars):', JWT_SECRET.substring(0, 10) + '...');
+  // console.log('JWT_EXPIRES_IN:', JWT_EXPIRES_IN);
+  // console.log('User data for token:', { id: user.id, email: user.email, name: user.name });
   
   const payload = {
     id: user.id,
@@ -26,31 +26,31 @@ const generateToken = (user) => {
     subject: user.id
   });
   
-  console.log('Generated token length:', token.length);
-  console.log('Generated token (first 100 chars):', token.substring(0, 100) + '...');
-  console.log('=== END TOKEN GENERATION ===');
+  // console.log('Generated token length:', token.length);
+  // console.log('Generated token (first 100 chars):', token.substring(0, 100) + '...');
+  // console.log('=== END TOKEN GENERATION ===');
   
   return token;
 };
 
 const verifyToken = (token) => {
-  console.log('=== VERIFYING JWT TOKEN ===');
-  console.log('Token to verify (first 50 chars):', token.substring(0, 50) + '...');
-  console.log('JWT_SECRET exists for verification:', !!JWT_SECRET);
+  // console.log('=== VERIFYING JWT TOKEN ===');
+  // console.log('Token to verify (first 50 chars):', token.substring(0, 50) + '...');
+  // console.log('JWT_SECRET exists for verification:', !!JWT_SECRET);
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    console.log('Token verification SUCCESS');
-    console.log('Decoded payload:', decoded);
-    console.log('Token expires at:', new Date(decoded.exp * 1000));
-    console.log('Current time:', new Date());
-    console.log('=== END TOKEN VERIFICATION (SUCCESS) ===');
+    // console.log('Token verification SUCCESS');
+    // console.log('Decoded payload:', decoded);
+    // console.log('Token expires at:', new Date(decoded.exp * 1000));
+    // console.log('Current time:', new Date());
+    // console.log('=== END TOKEN VERIFICATION (SUCCESS) ===');
     return decoded;
   } catch (error) {
-    console.log('Token verification FAILED');
-    console.log('Error name:', error.name);
-    console.log('Error message:', error.message);
-    console.log('=== END TOKEN VERIFICATION (FAILED) ===');
+    // console.log('Token verification FAILED');
+    // console.log('Error name:', error.name);
+    // console.log('Error message:', error.message);
+    // console.log('=== END TOKEN VERIFICATION (FAILED) ===');
     
     if (error.name === 'TokenExpiredError') {
       throw new Error('Token has expired');
@@ -63,8 +63,8 @@ const verifyToken = (token) => {
 };
 
 const extractTokenFromHeader = (authHeader) => {
-  console.log('=== EXTRACTING TOKEN FROM HEADER ===');
-  console.log('Auth header:', authHeader);
+  // console.log('=== EXTRACTING TOKEN FROM HEADER ===');
+  // console.log('Auth header:', authHeader);
   
   if (!authHeader) {
     console.log('No auth header provided');
@@ -72,7 +72,7 @@ const extractTokenFromHeader = (authHeader) => {
   }
 
   const parts = authHeader.split(' ');
-  console.log('Auth header parts:', parts);
+  // console.log('Auth header parts:', parts);
   
   if (parts.length !== 2 || parts[0] !== 'Bearer') {
     console.log('Invalid auth header format');
@@ -80,8 +80,8 @@ const extractTokenFromHeader = (authHeader) => {
   }
 
   const token = parts[1];
-  console.log('Extracted token (first 50 chars):', token.substring(0, 50) + '...');
-  console.log('=== END TOKEN EXTRACTION ===');
+  // console.log('Extracted token (first 50 chars):', token.substring(0, 50) + '...');
+  // console.log('=== END TOKEN EXTRACTION ===');
   return token;
 };
 

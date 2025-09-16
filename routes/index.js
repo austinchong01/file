@@ -17,12 +17,9 @@ router.get('/test', (req, res) => {
 
 // API route to get dashboard data - Updated to use JWT auth
 router.get('/dashboard', authenticateJWT, async (req, res) => {
-  console.log('=== DASHBOARD ROUTE ===');
-  console.log('User from middleware:', req.user);
   
   try {
     const userId = req.user.id;
-    console.log('Fetching data for user ID:', userId);
     
     const [folders, files] = await Promise.all([
       prisma.folder.findMany({
@@ -35,10 +32,6 @@ router.get('/dashboard', authenticateJWT, async (req, res) => {
         include: { folder: true }
       })
     ]);
-
-    console.log('Found folders:', folders.length);
-    console.log('Found files:', files.length);
-    console.log('✅ Dashboard data loaded successfully');
 
     res.json({ 
       success: true, 

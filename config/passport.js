@@ -9,8 +9,8 @@ const prisma = new PrismaClient();
 passport.use(new LocalStrategy(
   { usernameField: 'email' },
   async (email, password, done) => {
-    console.log('=== PASSPORT LOCAL STRATEGY ===');
-    console.log('Login attempt for email:', email);
+    // console.log('=== PASSPORT LOCAL STRATEGY ===');
+    // console.log('Login attempt for email:', email);
     
     try {
       const user = await prisma.user.findUnique({
@@ -24,12 +24,12 @@ passport.use(new LocalStrategy(
         return done(null, false, { message: "No user with that email"});
       }
 
-      console.log('Comparing password...');
+      // console.log('Comparing password...');
       const isMatch = await bcrypt.compare(password, user.password);
-      console.log('Password match result:', isMatch);
+      // console.log('Password match result:', isMatch);
       
       if (isMatch) {
-        console.log('✅ Password correct, authentication successful');
+        // console.log('✅ Password correct, authentication successful');
         return done(null, user);
       } else {
         console.error("❌ Password incorrect");

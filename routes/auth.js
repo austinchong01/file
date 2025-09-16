@@ -79,15 +79,15 @@ router.post('/register', redirectIfAuthenticated, registerValidation, async (req
 });
 
 router.post('/login', redirectIfAuthenticated, (req, res, next) => {
-  console.log('=== LOGIN ATTEMPT ===');
-  console.log('Request body:', req.body);
-  console.log('Request headers:', req.headers);
+  // console.log('=== LOGIN ATTEMPT ===');
+  // console.log('Request body:', req.body);
+  // console.log('Request headers:', req.headers);
   
   passport.authenticate('local', (err, user, info) => {
-    console.log('Passport authenticate callback:');
-    console.log('- Error:', err);
-    console.log('- User:', user ? { id: user.id, email: user.email, name: user.name } : null);
-    console.log('- Info:', info);
+    // console.log('Passport authenticate callback:');
+    // console.log('- Error:', err);
+    // console.log('- User:', user ? { id: user.id, email: user.email, name: user.name } : null);
+    // console.log('- Info:', info);
     
     if (err) {
       console.error('Passport error:', err);
@@ -106,12 +106,12 @@ router.post('/login', redirectIfAuthenticated, (req, res, next) => {
     }
     
     // Generate JWT token
-    console.log('Generating JWT token for user:', user.id);
+    // console.log('Generating JWT token for user:', user.id);
     const token = generateToken(user);
-    console.log('Generated token (first 50 chars):', token.substring(0, 50) + '...');
+    // console.log('Generated token (first 50 chars):', token.substring(0, 50) + '...');
     
     // Option 1: Send token in response body (for localStorage)
-    console.log('Sending token in response body');
+    // console.log('Sending token in response body');
     return res.json({ 
       success: true, 
       message: 'Login successful',
