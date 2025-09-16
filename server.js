@@ -72,7 +72,8 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     secure: isProduction, // Use secure cookies in production
     httpOnly: true,
-    sameSite: isProduction ? 'none' : 'lax' // 'none' for cross-site in production
+    sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
+    domain: isProduction ? undefined : undefined // Let browser handle domain
   },
   store: new PrismaSessionStore(prisma, {
     checkPeriod: 2 * 60 * 1000,

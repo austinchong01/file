@@ -1,7 +1,15 @@
-// middleware/auth.js - Updated for API responses
+// middleware/auth.js - Updated with debugging
 
 // Authentication middleware for API routes
 exports.ensureAuthenticated = (req, res, next) => {
+  console.log('=== Authentication Check ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('Session:', req.session);
+  console.log('User:', req.user);
+  console.log('Is Authenticated:', req.isAuthenticated());
+  console.log('Cookies:', req.headers.cookie);
+  console.log('=== End Auth Check ===');
+  
   if (req.isAuthenticated()) {
     return next();
   }

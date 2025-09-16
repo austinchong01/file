@@ -63,8 +63,13 @@ router.post('/register', registerValidation, async (req, res) => {
 });
 
 router.post('/login', (req, res, next) => {
+  console.log('=== Login Attempt ===');
+  console.log('Request body:', req.body);
+  console.log('Session before login:', req.session);
+  
   passport.authenticate('local', (err, user, info) => {
     if (err) {
+      console.error('Passport error:', err);
       return res.status(500).json({ 
         success: false, 
         message: 'Authentication error' 
@@ -72,6 +77,7 @@ router.post('/login', (req, res, next) => {
     }
     
     if (!user) {
+      console.log('Login failed:', info);
       return res.status(401).json({ 
         success: false, 
         message: info.message || 'Invalid credentials' 
@@ -80,11 +86,18 @@ router.post('/login', (req, res, next) => {
     
     req.logIn(user, (err) => {
       if (err) {
+        console.error('Login error:', err);
         return res.status(500).json({ 
           success: false, 
           message: 'Login failed' 
         });
       }
+      
+      console.log('=== Login Success ===');
+      console.log('Session after login:', req.session);
+      console.log('Session ID:', req.sessionID);
+      console.log('User:', user);
+      console.log('Is Authenticated:', req.isAuthenticated());
       
       return res.json({ 
         success: true, 
@@ -93,7 +106,8 @@ router.post('/login', (req, res, next) => {
           id: user.id,
           name: user.name,
           email: user.email
-        }
+        },
+        sessionId: req.sessionID // For debugging
       });
     });
   })(req, res, next);
