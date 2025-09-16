@@ -49,8 +49,10 @@ app.use(cors({
     'Authorization', 
     'X-Requested-With',
     'Accept',
-    'Origin'
+    'Origin',
+    'Cookie'
   ],
+  exposedHeaders: ['Set-Cookie'],
   optionsSuccessStatus: 200,
   maxAge: 86400 // 24 hours
 }));
