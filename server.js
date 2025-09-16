@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 
 // 1. CORS FIRST
 app.use(cors({
-  origin: ['https://file-frontend-finj.onrender.com', 'http://localhost:5173', 'http://localhost:3000'],
+  origin: [`${process.env.FRONTEND_URL}`, 'http://localhost:5173', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
