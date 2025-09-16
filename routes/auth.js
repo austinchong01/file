@@ -119,19 +119,19 @@ router.post('/login', (req, res, next) => {
 //   }
 // });
 
-// router.post('/logout', (req, res) => {
-//   req.logout(err => {
-//     if (err) {
-//       return res.status(500).json({ 
-//         success: false, 
-//         message: 'Logout failed' 
-//       });
-//     }
-//     res.json({ 
-//       success: true, 
-//       message: 'Logged out successfully' 
-//     });
-//   });
-// });
+router.post('/logout', (req, res) => {
+  req.logout(err => {
+    if (err) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Logout failed' 
+      });
+    }
+    res.json({ 
+      success: true, 
+      message: 'Logged out successfully' 
+    });
+  });
+});
 
 module.exports = router;
