@@ -148,10 +148,48 @@ router.post("/upload", authenticateJWT, (req, res) => {
   });
 });
 
-router.get("/:id/download", authenticateJWT, async (req, res) => {
+router.get("/:id/download", async (req, res) => {
   try {
+    let user = null;
+
+    // Try to get user from JWT middleware first
+    if (req.user) {
+      user = req.user;
+    } else {
+      // If no user from middleware, try to get token from query parameter
+      const token = req.query.token;
+      if (token) {
+        try {
+          const { verifyToken } = require('../utils/jwt');
+          const decoded = verifyToken(token);
+          
+          // Verify user exists
+          const { PrismaClient } = require('@prisma/client');
+          const prisma = new PrismaClient();
+          
+          user = await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: { id: true, email: true, name: true }
+          });
+        } catch (error) {
+          console.error('Token verification failed:', error);
+          return res.status(401).json({ 
+            success: false, 
+            message: 'Invalid token' 
+          });
+        }
+      }
+    }
+
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required' 
+      });
+    }
+
     const file = await prisma.file.findFirst({
-      where: { id: req.params.id, userId: req.user.id }, // Using req.user from JWT
+      where: { id: req.params.id, userId: user.id },
     });
 
     if (!file) {
