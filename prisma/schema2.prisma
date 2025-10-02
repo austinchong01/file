@@ -1,0 +1,60 @@
+// prisma/schema.prisma - Updated schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id       String @id @default(cuid())
+    email    String @unique
+    password String
+    name     String
+
+    folders Folder[]
+    files   File[]
+
+    @@map("users")
+}
+
+model File {
+    id                     String   @id @default(cuid())
+    userId                 String
+    folderId               String?
+    originalName           String
+    displayName            String?
+
+    cloudinaryUrl          String   @unique
+    cloudinaryPublicId     String
+    cloudinaryResourceType String
+    mimetype               String
+    size                   Int
+
+    createdAt              DateTime @default(now())
+    updatedAt              DateTime @updatedAt
+
+    user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+    @@index([userId])
+    @@index([folderId])
+    @@map("files")
+}
+
+model Folder {
+    id        String   @id @default(cuid())
+    name      String
+    userId    String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    files File[]
+
+    @@index([userId])
+    @@map("folders")
+}
