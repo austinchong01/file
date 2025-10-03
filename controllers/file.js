@@ -39,4 +39,4 @@ async function createFile(file, folderId, result, userId, displayName) {
 // delete file
 //
 
-module.exports = {};
+module.exports = {createFile, };

@@ -1,37 +1,20 @@
 const express = require("express");
-const multer = require("multer");
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-
 const router = express.Router();
 
-// configure cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+const cloudinary = require("../config/cloudinary");
+// const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const upload = require("../middleware/multer");
+
+
 
 const storage = new CloudinaryStorage({
 
 });
 
-// Configure Multer
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024, // 5MB file size 
-            files: 5 },                 // Max 5 files
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only images allowed'));
-    }
-  }
-});
 
-
-router.post("/upload", (req, res) => {
+router.post("/upload", upload.single("image"), (req, res) => {
+  cloudinary.upload.upload()
+  
 });
 
 router.post("/rename", authenticateJWT, async (req, res) => {
