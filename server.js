@@ -26,7 +26,7 @@ app.get('/health', (req, res) => {
 
 // Routes
 // app.use('/', require('./routes/index'));
-// app.use('/auth', require('./routes/auth'));
+app.use('/user', require('./routes/users'));
 app.use('/files', require('./routes/files'));
 // app.use('/folders', require('./routes/folders'));
 

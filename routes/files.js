@@ -48,13 +48,7 @@ router.post("/test", (req, res) => {
           res.json({
             success: true,
             message: "File uploaded successfully",
-            originalName: req.file.originalname,
-            displayName: req.body.displayName,
-            url: result.secure_url,
-            public_id: result.public_id,
-            resource_type: result.resource_type,
-            mimetype: req.file.mimetype,
-            size: req.file.size
+            displayName: req.body.displayName
           });
         } catch (dbError) {
           console.error("Database error:", dbError.message);
