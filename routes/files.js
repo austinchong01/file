@@ -1,151 +1,37 @@
 const express = require("express");
 const multer = require("multer");
-const path = require("path");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const { PrismaClient } = require("@prisma/client");
-const { authenticateJWT } = require("../middleware/jwtAuth"); // Updated import
-const cloudinary = require("../config/cloudinary");
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
-const getResourceType = (mimetype) => {
-  if (mimetype.startsWith("image/")) return "image";
-  if (mimetype.startsWith("video/")) return "video";
-  return "raw";
-};
+// configure cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: (req, file) => {
-    const resourceType = getResourceType(file.mimetype);
-    return {
-      folder: "file-uploader-test",
-      resource_type: resourceType,
-      public_id: `${Date.now()}_${Math.round(Math.random() * 1e9)}_${
-        file.originalname
-      }`,
-      allowed_formats: [
-        "jpg",
-        "jpeg",
-        "png",
-        "gif",
-        "webp",
-        "pdf",
-        "mp4",
-        "mov",
-      ],
-    };
-  },
+
 });
 
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
-    files: 1,
-  },
+// Configure Multer
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, // 5MB file size 
+            files: 5 },                 // Max 5 files
   fileFilter: (req, file, cb) => {
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-      "application/pdf",
-      "video/mp4",
-      "video/quicktime",
-    ];
-
-    if (allowedTypes.includes(file.mimetype)) {
-      console.log("File type accepted:", file.mimetype);
+    if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      console.log("File type rejected:", file.mimetype);
-      cb(new Error(`File type ${file.mimetype} not supported`), false);
+      cb(new Error('Only images allowed'));
     }
-  },
+  }
 });
 
-// Updated to use JWT authentication
-router.post("/upload", authenticateJWT, (req, res) => {
-  upload.single("file")(req, res, async (err) => {
-    if (err) {
-      console.error("Multer error:", err);
-      const message =
-        err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE"
-          ? "File too large. Maximum size is 10MB."
-          : err.message || "Error uploading file";
-      return res.status(400).json({ success: false, message });
-    }
 
-    if (!req.file) {
-      console.error("No file received");
-      return res
-        .status(400)
-        .json({ success: false, message: "No file uploaded" });
-    }
-
-    try {
-      const { folderId, displayName } = req.body;
-
-      // Validate folder ownership if folderId is provided
-      if (folderId && folderId.trim()) {
-        const folder = await prisma.folder.findFirst({
-          where: { id: folderId, userId: req.user.id },
-        });
-        if (!folder) {
-          return res.status(400).json({
-            success: false,
-            message: "Invalid folder selected",
-          });
-        }
-      }
-
-      // Use displayName if provided, otherwise fall back to original name
-      const finalDisplayName =
-        displayName && displayName.trim()
-          ? displayName.trim()
-          : req.file.originalname;
-
-      // Instead of just req.file.public_id, store the full path
-      const publicId = req.file.filename;
-
-      const secureUrl =
-        req.file.secure_url ||
-        req.file.url ||
-        req.file.path ||
-        req.file.location;
-      const resourceType = getResourceType(req.file.mimetype);
-
-      const fileRecord = await prisma.file.create({
-        data: {
-          originalName: req.file.originalname,
-          displayName: finalDisplayName,
-          mimetype: req.file.mimetype,
-          size: req.file.size,
-          cloudinaryUrl: secureUrl,
-          cloudinaryPublicId: publicId,
-          cloudinaryResourceType: resourceType,
-          userId: req.user.id, // Using req.user from JWT middleware
-          folderId: folderId && folderId.trim() ? folderId : null,
-        },
-      });
-
-      return res.json({
-        success: true,
-        message: "File uploaded successfully",
-        file: fileRecord,
-      });
-    } catch (error) {
-      console.error("Upload error:", error);
-
-      return res.status(500).json({
-        success: false,
-        message: "Error uploading file: " + error.message,
-      });
-    }
-  });
+router.post("/upload", (req, res) => {
 });
 
 router.post("/rename", authenticateJWT, async (req, res) => {

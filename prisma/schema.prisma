@@ -1,60 +1,60 @@
-// // prisma/schema.prisma - Updated schema
+// prisma/schema.prisma - Updated schema
 
-// generator client {
-//   provider = "prisma-client-js"
-// }
+generator client {
+    provider = "prisma-client-js"
+}
 
-// datasource db {
-//   provider = "postgresql"
-//   url      = env("DATABASE_URL")
-// }
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
 
-// model User {
-//   id        String   @id @default(cuid())
-//   email     String   @unique
-//   password  String
-//   name      String
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
+model User {
+    id       String @id @default(cuid())
+    email    String @unique
+    password String
+    name     String
 
-//   folders Folder[]
-//   files   File[]
+    folders Folder[]
+    files   File[]
 
-//   @@map("users")
-// }
+    @@map("users")
+}
 
-// model Folder {
-//   id          String   @id @default(cuid())
-//   name        String
-//   userId      String
-//   parentId    String?
-//   createdAt   DateTime @default(now())
-//   updatedAt   DateTime @updatedAt
-  
-//   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-//   parent   Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
-//   children Folder[] @relation("FolderHierarchy")
-//   files    File[]
-  
-//   @@map("folders")
-// }
+model File {
+    id                     String   @id @default(cuid())
+    userId                 String
+    folderId               String?
+    originalName           String
+    displayName            String?
 
-// model File {
-//   id                      String   @id @default(cuid())
-//   originalName            String
-//   displayName             String?
-//   mimetype                String
-//   size                    Int
-//   cloudinaryUrl           String   // Cloudinary URL
-//   cloudinaryPublicId      String   // Cloudinary public_id
-//   cloudinaryResourceType  String?  // Store the resource type used in Cloudinary
-//   userId                  String
-//   folderId                String?
-//   createdAt               DateTime @default(now())
-//   updatedAt               DateTime @updatedAt
-  
-//   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-//   folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  
-//   @@map("files")
-// }
+    cloudinaryUrl          String   @unique
+    cloudinaryPublicId     String
+    cloudinaryResourceType String
+    mimetype               String
+    size                   Int
+
+    createdAt              DateTime @default(now())
+    updatedAt              DateTime @updatedAt
+
+    user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+    @@index([userId])
+    @@index([folderId])
+    @@map("files")
+}
+
+model Folder {
+    id        String   @id @default(cuid())
+    name      String
+    userId    String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    files File[]
+
+    @@index([userId])
+    @@map("folders")
+}
