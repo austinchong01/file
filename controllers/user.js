@@ -71,7 +71,7 @@ async function deleteUser(id) {
     console.error("Error deleting user:", error);
 
     if (error.code === "P2025")
-      throw new Error(`User with email '${id}' not found`);
+      throw new Error(`User with id '${id}' not found`);
 
     throw error;
   }

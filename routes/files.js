@@ -6,11 +6,13 @@ const cloudinary = require("../config/cloudinary");
 const upload = require("../middleware/multer");
 const fileController = require("../controllers/file");
 
-router.get("/upload", (req, res) => {
+router.get("/", (req, res) => {
   res.render("test");
 });
 
-router.post("/test", (req, res) => {
+
+// create/update file
+router.post("/upload", (req, res) => {
   const userId = "user1";
   const folderId = "folder1"
 
@@ -41,7 +43,7 @@ router.post("/test", (req, res) => {
           });
         }
 
-        // upload to database with try-catch
+        // upload to database
         try {
           await fileController.createFile(req.file, folderId, result, userId, req.body.displayName);
 
@@ -53,12 +55,11 @@ router.post("/test", (req, res) => {
         } catch (dbError) {
           console.error("Database error:", dbError.message);
           
-          // Optionally: Clean up Cloudinary upload since DB save failed
+          // Clean up Cloudinary upload since DB save failed
           await cloudinary.uploader.destroy(result.public_id, { resource_type: result.resource_type});
           
           return res.status(500).json({
             success: false,
-            result: result.resource_type,
             message: "Database save failed",
             error: dbError.message
           });
